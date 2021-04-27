@@ -1,35 +1,32 @@
 import itertools
+from concurrent.futures.thread import ThreadPoolExecutor
+
 import numpy as np
 import marshal
 import types
 
-from multiprocessing import Pool
-
 
 def tune(func, params_dict, direction="minimize", workers=1):
     param_sets = list((dict(zip(params_dict.keys(), x)) for x in itertools.product(*params_dict.values())))
-    args = [(marshal.dumps(func.__code__), parameters) for parameters in param_sets]
+    call = lambda args: func(**args)
 
     if workers > 1:
-        pool = Pool(workers)
-        results = pool.map(evalaute, args)
+        scores = []
+        executor = ThreadPoolExecutor(max_workers=workers)
+        results_gen = executor.map(call, param_sets)
+
+        for res in results_gen:
+            scores.append(res)
     else:
-        results = list(map(evalaute, args))
+        scores = list(map(call, param_sets))
 
     if direction.startswith("min"):
-        idx = np.argmin(results)
+        idx = np.argmin(scores)
     else:
-        idx = np.argmax(results)
+        idx = np.argmax(scores)
 
-    return param_sets[idx], results[idx]
+    return param_sets[idx], scores[idx]
 
-
-def evalaute(args):
-    func = types.FunctionType(marshal.loads(args[0]), globals())
-    parameters = args[1]
-    score = func(**parameters)
-
-    return score
 
 
 
