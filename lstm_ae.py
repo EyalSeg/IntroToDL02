@@ -6,14 +6,11 @@ DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 
 
 def init_weights(lstm:nn.LSTM):
-    # for name, param in lstm.named_parameters():
-    #     if 'bias' in name:
-    #         nn.init.constant(param, 0.0)
-    #     elif 'weight' in name:
-    #         nn.init.xavier_normal(param)
-    nn.init.xavier_uniform(lstm.weight_ih_l0, gain=np.sqrt(2))
-    nn.init.xavier_uniform(lstm.weight_hh_l0, gain=np.sqrt(2))
-
+    for name, param in lstm.named_parameters():
+        if 'bias' in name:
+            nn.init.constant_(param, 0.0)
+        elif 'weight' in name:
+            nn.init.xavier_normal_(param)
 
 class LstmAutoEncoder(nn.Module):
     def __init__(self, input_dim, encoded_dim, num_layers=1, device=DEVICE):
