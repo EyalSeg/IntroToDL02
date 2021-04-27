@@ -10,8 +10,11 @@ def tune(func, params_dict, direction="minimize", workers=1):
     param_sets = list((dict(zip(params_dict.keys(), x)) for x in itertools.product(*params_dict.values())))
     args = [(marshal.dumps(func.__code__), parameters) for parameters in param_sets]
 
-    pool = Pool(workers)
-    results = pool.map(evalaute, args)
+    if workers > 1:
+        pool = Pool(workers)
+        results = pool.map(evalaute, args)
+    else:
+        results = list(map(evalaute, args))
 
     if direction.startswith("min"):
         idx = np.argmin(results)
