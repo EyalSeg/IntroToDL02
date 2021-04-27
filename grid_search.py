@@ -1,28 +1,32 @@
 import itertools
-import operator
+import numpy as np
+import marshal
+import types
 
-from math import inf
+from multiprocessing import Pool
 
 
-def tune(func, params_dict, direction="minimize"):
-    param_sets = (dict(zip(params_dict.keys(), x)) for x in itertools.product(*params_dict.values()))
+def tune(func, params_dict, direction="minimize", workers=1):
+    param_sets = list((dict(zip(params_dict.keys(), x)) for x in itertools.product(*params_dict.values())))
+    args = [(marshal.dumps(func.__code__), parameters) for parameters in param_sets]
+
+    pool = Pool(workers)
+    results = pool.map(evalaute, args)
 
     if direction.startswith("min"):
-        best_score = inf
-        better_than = operator.lt
+        idx = np.argmin(results)
     else:
-        best_score = -inf
-        better_than = operator.gt
+        idx = np.argmax(results)
 
-    best_params = None
+    return param_sets[idx], results[idx]
 
-    for params in param_sets:
-        score = func(**params)
 
-        if better_than(score, best_score):
-            best_score = score
-            best_params = params
+def evalaute(args):
+    func = types.FunctionType(marshal.loads(args[0]), globals())
+    parameters = args[1]
+    score = func(**parameters)
 
-    return best_params, best_score
+    return score
+
 
 
