@@ -18,17 +18,6 @@ class Test_Lstm_AE:
     def ae(self, seq_dim, latent_size, num_layers):
         return LstmAutoEncoder(seq_dim, latent_size, num_layers).to(device)
 
-    @pytest.mark.parametrize("seq_length", [1, 50])
-    @pytest.mark.parametrize("latent_size", [1, 20])
-    @pytest.mark.parametrize("batch_size", [1, 100])
-    @pytest.mark.parametrize("seq_dim", [1, 5])
-    @pytest.mark.parametrize("num_layers", [1, 2])
-    def test_encoded_shape(self, seq_length, latent_size, batch_size, seq_dim, num_layers, ae):
-        input = T.randn(batch_size, seq_length, seq_dim).to(device)
-
-        encoded = ae._encode(input)
-        assert encoded.shape == (batch_size, latent_size)
-
     @pytest.mark.parametrize("seq_length", [50])
     @pytest.mark.parametrize("latent_size", [20])
     @pytest.mark.parametrize("batch_size", [1, 100])

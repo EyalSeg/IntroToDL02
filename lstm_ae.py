@@ -5,7 +5,7 @@ import torch.nn as nn
 DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 
 
-def init_weights(lstm:nn.LSTM):
+def init_weights(lstm):
     for name, param in lstm.named_parameters():
         if 'bias' in name:
             nn.init.constant_(param, 0.0)
@@ -13,60 +13,54 @@ def init_weights(lstm:nn.LSTM):
             nn.init.xavier_normal_(param)
 
 
-class LstmAutoEncoder(nn.Module):
-    def __init__(self, input_dim, encoded_dim, num_layers=1, device=DEVICE):
-        super(LstmAutoEncoder, self).__init__()
+class Encoder(nn.Module):
+    def __init__(self, seq_dim, encoding_dim, num_layers=1, device=DEVICE):
+        super(Encoder, self).__init__()
 
-        self.input_dim = input_dim
-        self.encoded_dim = encoded_dim
-        self.num_layers = num_layers
-        self.device = None
-
-        self.encoder = nn.LSTM(input_size=input_dim,
-                               hidden_size=encoded_dim,
-                               num_layers=num_layers,
-                               batch_first=True)
-        init_weights(self.encoder)
-
-        self.decoder = nn.LSTM(input_size=encoded_dim,
-                               hidden_size=input_dim,
-                               num_layers=num_layers,
-                               batch_first=True)
-        init_weights(self.decoder)
-
-        self.encoder_activation = nn.ReLU()
-        self.decoder_activation = nn.Sigmoid()
-
+        self.rnn = nn.LSTM(input_size=seq_dim,
+                           hidden_size=encoding_dim,
+                           num_layers=num_layers,
+                           batch_first=True)
+        init_weights(self.rnn)
         self.to(device)
 
-    def _encode(self, X):
-        h0 = T.randn(self.num_layers, X.size(0), self.encoded_dim)
-        c0 = T.randn(self.num_layers, X.size(0), self.encoded_dim)
-
-        h0 = T.autograd.Variable(h0).to(self.device)
-        c0 = T.autograd.Variable(c0).to(self.device)
-
-        X_, (h_n, c_n) = self.encoder(X, (h0, c0))
-        # X, (h_n, c_n) = self.encoder(X)
+    def forward(self, X):
+        X_, (h_n, c_n) = self.rnn(X)
         h_n = h_n[-1]
 
         return h_n
 
-    def _decode(self, encoded_input):
-        h0 = T.randn(self.num_layers, encoded_input.size(0), self.input_dim)
-        c0 = T.randn(self.num_layers, encoded_input.size(0), self.input_dim)
 
-        h0 = T.autograd.Variable(h0).to(self.device)
-        c0 = T.autograd.Variable(c0).to(self.device)
+class Decoder(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim, num_layers=1, device=DEVICE):
+        super(Decoder, self).__init__()
 
-        decoded, hidden_state = self.decoder(encoded_input, (h0, c0))
+        self.rnn = nn.LSTM(input_size=input_dim,
+                           hidden_size=hidden_dim,
+                           num_layers=num_layers,
+                           batch_first=True)
+        self.output_layer = nn.Linear(hidden_dim, output_dim)
 
-        return decoded
+        init_weights(self.rnn)
+        init_weights(self.output_layer)
+        self.to(device)
+
+    def forward(self, encoded_X):
+        decoded_X, hidden_state = self.rnn(encoded_X)
+        return self.output_layer(decoded_X)
+
+
+class LstmAutoEncoder(nn.Module):
+    def __init__(self, input_dim, encoded_dim, num_layers=1, device=DEVICE):
+        super(LstmAutoEncoder, self).__init__()
+
+        self.encoder = Encoder(input_dim, encoded_dim, num_layers, device)
+        self.decoder = Decoder(encoded_dim, input_dim, encoded_dim * 2, num_layers, device)
 
     def forward(self, X):
-        z = self._encode(X)
-        z = z.unsqueeze(1).repeat(1, X.shape[1], 1)
-        x_ = self._decode(z)
+        z = self.encoder(X)
+        z = z.unsqueeze(1).repeat((1, X.shape[1], 1))
+        x_ = self.decoder(z)
 
         return x_
 
