@@ -12,6 +12,7 @@ def init_weights(lstm:nn.LSTM):
         elif 'weight' in name:
             nn.init.xavier_normal_(param)
 
+
 class LstmAutoEncoder(nn.Module):
     def __init__(self, input_dim, encoded_dim, num_layers=1, device=DEVICE):
         super(LstmAutoEncoder, self).__init__()
@@ -45,11 +46,9 @@ class LstmAutoEncoder(nn.Module):
         h0 = T.autograd.Variable(h0).to(self.device)
         c0 = T.autograd.Variable(c0).to(self.device)
 
-        X, (h_n, c_n) = self.encoder(X, (h0, c0))
+        X_, (h_n, c_n) = self.encoder(X, (h0, c0))
         # X, (h_n, c_n) = self.encoder(X)
-        # todo: check if an activation method is needed
         h_n = h_n[-1]
-        h_n = self.encoder_activation(h_n)
 
         return h_n
 
@@ -61,10 +60,8 @@ class LstmAutoEncoder(nn.Module):
         c0 = T.autograd.Variable(c0).to(self.device)
 
         decoded, hidden_state = self.decoder(encoded_input, (h0, c0))
-        # decoded, hidden_state = self.decoder(encoded_input)
-        # todo: check if an activation method is needed
-        # decoded = self.decoder_activation(decoded)
-        return self.decoder_activation(decoded)
+
+        return decoded
 
     def forward(self, X):
         z = self._encode(X)
