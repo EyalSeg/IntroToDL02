@@ -87,20 +87,19 @@ if __name__ == "__main__":
     train_data, valid_data, test_data = T.utils.data.random_split(
         dataset, (train_n, validate_n, test_n))
 
-
     should_tune = True # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
-            'epochs': [50],
+            'epochs': [1000],
             'seq_dim': [1],
             'train_data': [train_data],
             'validate_data': [valid_data],
             'batch_size': [512],
-            'num_layers': [1, 2],
 
-            'latent_size': [1, 5, 20],
-            'lr': [0.001, 0.0001, 0.00001],
-            'grad_clipping': [1, 0.1, 0.001],
+            'num_layers': [1, 2, 5],
+            'latent_size': [256],
+            'lr': [0.0001, 0.00001, 0.000001],
+            'grad_clipping': [0.001, 0.01, 0.1, 0.5, 1, 2, 5],
         }
 
         best_params, best_loss = tune(test_hyperparameters, param_choices, "minimize", workers=4)
@@ -109,21 +108,23 @@ if __name__ == "__main__":
         print(f"\tlatent size: {best_params['latent_size']}")
         print(f"\tlr: {best_params['lr']}")
         print(f"\tgrad_clipping: {best_params['grad_clipping']}")
+        print(f"\tnum_layers: {best_params['num_layers']}")
+
     else:
         best_params = {
             'epochs': 10,
             'seq_dim': 1,
             'train_data': train_data,
             'validate_data': valid_data,
-            'batch_size': 1,
-            'num_layers': 5,
+            'batch_size': 512,
 
-            'latent_size': 50,
+            'num_layers': 2,
+            'latent_size': 256,
             'lr': 0.0001,
-            'grad_clipping': 0.1,
+            'grad_clipping': 0.5,
         }
 
-    train_epochs = 100
+    train_epochs = 1000
 
     train_losses = []
     validate_losses = []
