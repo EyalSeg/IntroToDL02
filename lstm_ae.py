@@ -26,9 +26,8 @@ class Encoder(nn.Module):
 
     def forward(self, X):
         X_, (h_n, c_n) = self.rnn(X)
-        h_n = h_n[-1]
 
-        return h_n
+        return X_, h_n[-1]
 
 
 class Decoder(nn.Module):
@@ -55,12 +54,11 @@ class LstmAutoEncoder(nn.Module):
         super(LstmAutoEncoder, self).__init__()
 
         self.encoder = Encoder(input_dim, encoded_dim, num_layers, device)
-        self.decoder = Decoder(encoded_dim, input_dim, encoded_dim * 2, num_layers, device)
+        self.decoder = Decoder(encoded_dim, input_dim, encoded_dim * 1, num_layers, device)
 
     def forward(self, X):
-        z = self.encoder(X)
-        z = z.unsqueeze(1).repeat((1, X.shape[1], 1))
-        x_ = self.decoder(z)
+        temporal_output, context = self.encoder(X)
+        x_ = self.decoder(temporal_output)
 
         return x_
 
