@@ -52,9 +52,10 @@ class Decoder(nn.Module):
 class LstmAutoEncoder(nn.Module):
     def __init__(self, input_dim, encoded_dim, num_layers=1, device=DEVICE):
         super(LstmAutoEncoder, self).__init__()
+        self.encoded_dim = encoded_dim
 
-        self.encoder = Encoder(input_dim, encoded_dim, num_layers, device)
-        self.decoder = Decoder(encoded_dim, input_dim, encoded_dim * 1, num_layers, device)
+        self.encoder = Encoder(input_dim, self.encoded_dim, num_layers, device)
+        self.decoder = Decoder(self.encoded_dim, input_dim, self.encoded_dim, num_layers, device)
 
     def forward(self, X):
         temporal_output, context = self.encoder(X)
