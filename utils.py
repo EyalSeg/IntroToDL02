@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from torchvision.transforms import ToTensor
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union
@@ -28,6 +29,29 @@ class LstmAEHyperparameters:
 
     def create_ae(self):
         return LstmAutoEncoder(self.seq_dim, self.latent_size, self.num_layers)
+
+
+def load_torch_dataset(dataset, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
+    train_data = dataset(
+        root=cache_path,
+        train=True,
+        download=True,
+        transform=ToTensor()
+    )
+    train_len = int(len(train_data) * train_validate_split[0])
+    validate_len = int(len(train_data) * train_validate_split[1])
+
+    train_data, validate_data = T.utils.data.random_split(train_data, [train_len, validate_len])
+
+    test_data = dataset(
+        root=cache_path,
+        train=False,
+        download=True,
+        transform=ToTensor()
+    )
+
+    return train_data, validate_data, test_data
+
 
 
 def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test_ratio=0.2):
