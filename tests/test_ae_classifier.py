@@ -23,9 +23,10 @@ class Test_AE_Classifier():
         input = T.randn(batch_size, seq_length, seq_dim).to(device)
 
         with T.no_grad():
-            output, predictions = ae.forward(input)
+            output = ae.forward(input)
+            sequence, predictions = output.output_sequence, output.label_predictions
 
-        assert input.shape == output.shape, "Output is not at the same shape of the input!"
+        assert input.shape == sequence.shape, "Output is not at the same shape of the input!"
         assert predictions.shape == (batch_size, n_classes)
 
     @pytest.mark.parametrize("seq_length", [50])
@@ -38,7 +39,8 @@ class Test_AE_Classifier():
         input = T.randn(batch_size, seq_length, seq_dim).to(device)
 
         with T.no_grad():
-            _, predictions = ae.forward(input)
+            output = ae.forward(input)
+            predictions = output.label_predictions
 
         sums = T.sum(predictions, dim=1)
         assert T.allclose(sums, T.ones(batch_size).to(device)), "Predictions do no sum to one!"

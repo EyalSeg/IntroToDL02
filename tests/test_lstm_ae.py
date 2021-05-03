@@ -27,7 +27,7 @@ class Test_Lstm_AE:
         input = T.randn(batch_size, seq_length, seq_dim).to(device)
 
         with T.no_grad():
-            output = ae.forward(input)
+            output = ae.forward(input).output_sequence
 
         assert input.shape == output.shape, "Output is not at the same shape of the input!"
 
@@ -52,7 +52,7 @@ class Test_Lstm_AE:
         for epoch in range(500):
             optimizer.zero_grad()
 
-            output = ae.forward(input)
+            output = ae.forward(input).output_sequence
             loss = criterion(output, input)
             loss.backward()
             optimizer.step()

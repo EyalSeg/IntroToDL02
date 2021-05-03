@@ -1,6 +1,6 @@
-import numpy as np
 import torch as T
 import torch.nn as nn
+from dataclasses import dataclass
 
 DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 
@@ -11,6 +11,11 @@ def init_weights(lstm):
             nn.init.constant_(param, 0.0)
         elif 'weight' in name:
             nn.init.xavier_normal_(param)
+
+
+@dataclass(frozen=True)
+class AutoencoderOutput:
+    output_sequence: T.Tensor
 
 
 class Encoder(nn.Module):
@@ -46,6 +51,7 @@ class Decoder(nn.Module):
 
     def forward(self, encoded_X):
         decoded_X, hidden_state = self.rnn(encoded_X)
+
         return self.output_layer(decoded_X)
 
 
@@ -61,7 +67,7 @@ class LstmAutoEncoder(nn.Module):
         temporal_output, context = self.encoder(X)
         x_ = self.decoder(temporal_output)
 
-        return x_
+        return AutoencoderOutput(x_)
 
     def to(self, device):
         self.device = device

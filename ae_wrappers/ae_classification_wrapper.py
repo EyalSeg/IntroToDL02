@@ -1,6 +1,14 @@
 import torch as T
 import torch.nn as nn
 
+from dataclasses import dataclass
+
+from lstm_ae import AutoencoderOutput
+
+@dataclass(frozen=True)
+class AutoencoderClassifierOutput(AutoencoderOutput):
+    label_predictions: T.Tensor
+
 
 class AutoEncoderClassifier(nn.Module):
     def __init__(self, ae, n_classes):
@@ -17,4 +25,4 @@ class AutoEncoderClassifier(nn.Module):
 
         x_ = self.ae.decoder(temporal_output)
 
-        return x_, labels
+        return AutoencoderClassifierOutput(x_, labels)
