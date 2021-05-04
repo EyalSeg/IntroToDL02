@@ -53,7 +53,6 @@ def load_torch_dataset(dataset, train_validate_split=(2/3, 1/3), cache_path='/da
     return train_data, validate_data, test_data
 
 
-
 def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test_ratio=0.2):
     train_n = int(train_ratio * len(dataset))
     validate_n = int(validate_ratio * len(dataset))
@@ -65,7 +64,7 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
     return train_data, valid_data, test_data
 
 
-def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=()):
+def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(), supervised=False):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
@@ -73,10 +72,17 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
 
         epoch_losses = []
         for batch in iter(train_dataloader):
-            batch = batch.to(DEVICE)
-            output = ae.forward(batch)
+            if supervised:
+                X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
-            loss = criterion(output, batch)
+                output = ae.forward(X)
+                loss = criterion(output, X, y)
+            else:
+                X = batch.to(DEVICE)
+
+                output = ae.forward(X)
+                loss = criterion(output, batch)
+
             loss.backward()
 
             if hyperparameters.grad_clipping is not None:
@@ -92,7 +98,7 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
             callback(epoch, ae, epoch_loss)
 
 
-def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters):
+def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False):
     train_losses = []
     validate_losses = []
 
@@ -111,16 +117,17 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
         train_dataloader,
         criterion,
         hyperparameters,
-        epoch_end_callbacks=[store_train_loss, store_validation_loss])
+        epoch_end_callbacks=[store_train_loss, store_validation_loss],
+        supervised=supervised)
 
     return train_losses, validate_losses
 
 
-def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters):
+def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
 
-    fit(ae, train_dataloader, criterion, hyperparameters)
+    fit(ae, train_dataloader, criterion, hyperparameters, supervised=supervised)
 
     validate_loader = DataLoader(validate_data, batch_size=len(validate_data))
     validation_set = next(iter(validate_loader)).to(DEVICE)
