@@ -31,13 +31,20 @@ class LstmAEHyperparameters:
         return LstmAutoEncoder(self.seq_dim, self.latent_size, self.num_layers)
 
 
-def load_torch_dataset(dataset, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
-    train_data = dataset(
-        root=cache_path,
-        train=True,
-        download=True,
-        transform=ToTensor()
-    )
+def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
+    if transform:
+        train_data = dataset(
+            root=cache_path,
+            train=True,
+            download=True,
+            transform=transform
+        )
+    else:
+        train_data = dataset(
+            root=cache_path,
+            train=True,
+            download=True,
+        )
     train_len = int(len(train_data) * train_validate_split[0])
     validate_len = int(len(train_data) * train_validate_split[1])
 
