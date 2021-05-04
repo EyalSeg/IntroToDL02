@@ -64,10 +64,16 @@ class LstmAutoEncoder(nn.Module):
         self.decoder = Decoder(self.encoded_dim, input_dim, self.encoded_dim, num_layers, device)
 
     def forward(self, X):
-        temporal_output, context = self.encoder(X)
-        x_ = self.decoder(temporal_output)
+        temporal_output, context = self.encode(X)
+        x_ = self.decode(temporal_output, context)
 
         return AutoencoderOutput(x_)
+
+    def encode(self, X):
+        return self.encoder(X)
+
+    def decode(self, temporal_output, context):
+        return self.decoder(temporal_output)
 
     def to(self, device):
         self.device = device

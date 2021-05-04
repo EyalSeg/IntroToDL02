@@ -18,11 +18,11 @@ class AutoEncoderClassifier(nn.Module):
         self.activation = nn.Softmax().to(ae.device)
 
     def forward(self, X):
-        temporal_output, context = self.ae.encoder(X)
+        temporal_output, context = self.ae.encode(X)
 
         labels = self.output_layer(context)
         labels = self.activation(labels)
 
-        x_ = self.ae.decoder(temporal_output)
+        x_ = self.ae.decode(temporal_output, context)
 
         return AutoencoderClassifierOutput(x_, labels)
