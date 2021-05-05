@@ -73,9 +73,9 @@ class LstmAutoEncoder(nn.Module):
         return self.encoder(X)
 
     def decode(self, temporal_output, context):
-        # context = context.unsqueeze(1).repeat((1, temporal_output.shape[1], 1))
-        # return self.decoder(context)
-        return self.decoder(temporal_output)
+        context = context.unsqueeze(1).repeat((1, temporal_output.shape[1], 1))
+        return self.decoder(context)
+        # return self.decoder(temporal_output)
 
     def to(self, device):
         self.device = device

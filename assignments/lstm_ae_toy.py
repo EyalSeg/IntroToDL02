@@ -71,10 +71,10 @@ if __name__ == "__main__":
     validate_loader = DataLoader(valid_data, batch_size=len(valid_data))
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
-    train_losses, validate_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params)
+    train_losses, validate_losses, train_accuracies, validate_accuracies = \
+        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params, verbose=True)
 
-    utils.draw_sample(ae, test_data, n_samples=2)
+    utils.draw_sample(ae, test_data, n_samples=2, title="Synthetic Data Set")
 
     df = pd.DataFrame.from_dict({"training set": train_losses,
                                  "validation set": validate_losses})
@@ -83,6 +83,16 @@ if __name__ == "__main__":
     sns.lineplot(data=df, dashes=False)
     lr_str = "{:12.7f}".format(best_params.lr)
     plt.title("Learn Loss")
+    plt.ylabel("Loss")
+    plt.show()
+
+    df = pd.DataFrame.from_dict({"training set": train_accuracies,
+                                 "validation set": validate_accuracies})
+    df.index.name = "Epoch"
+
+    sns.lineplot(data=df, dashes=False)
+    lr_str = "{:12.7f}".format(best_params.lr)
+    plt.title("Learn Accuracy")
     plt.ylabel("Loss")
     plt.show()
 
