@@ -32,6 +32,7 @@ class LstmAEHyperparameters:
 
 
 def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
+
     if transform:
         train_data = dataset(
             root=cache_path,
@@ -79,17 +80,7 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
 
         epoch_losses = []
         for batch in iter(train_dataloader):
-            if supervised:
-                X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
-
-                output = ae.forward(X)
-                loss = criterion(output, X, y)
-            else:
-                X = batch.to(DEVICE)
-
-                output = ae.forward(X)
-                loss = criterion(output, batch)
-
+            loss = batch_loss(ae, batch, criterion, supervised=supervised)
             loss.backward()
 
             if hyperparameters.grad_clipping is not None:
@@ -105,6 +96,19 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
             callback(epoch, ae, epoch_loss)
 
 
+def batch_loss(ae, batch, criterion, supervised=False):
+    if supervised:
+        X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
+
+        output = ae.forward(X)
+        return criterion(output, X, y)
+    else:
+        X = batch.to(DEVICE)
+
+        output = ae.forward(X)
+        return criterion(output, batch)
+
+
 def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False):
     train_losses = []
     validate_losses = []
@@ -112,22 +116,42 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
     store_train_loss = lambda epoch, ae, loss: train_losses.append(loss)
 
     def store_validation_loss(epoch, ae, train_loss):
-        validation_set = next(iter(validate_dataloader)).to(DEVICE)
+        validation_set = next(iter(validate_dataloader))
 
         with T.no_grad():
-            output = ae.forward(validation_set)
-            loss = criterion(output, validation_set).item()
+            loss = batch_loss(ae, validation_set, criterion, supervised=supervised).item()
 
         validate_losses.append(loss)
 
+    callbacks = [store_train_loss, store_validation_loss]
+
+    accuracies = []
+    if supervised:
+        def measure_accuracy(epoch, ae, train_loss):
+            validation_set = next(iter(validate_dataloader))
+            X, y = validation_set[0].to(DEVICE), validation_set[1].to(DEVICE)
+
+            with T.no_grad():
+                output = ae.forward(X)
+                predictions = T.argmax(output.label_predictions, -1)
+
+                correct = predictions.eq(y).sum().item()
+                accuracy = correct / predictions.shape[-1]
+
+            accuracies.append(accuracy)
+
+        callbacks.append(measure_accuracy)
     fit(ae,
         train_dataloader,
         criterion,
         hyperparameters,
-        epoch_end_callbacks=[store_train_loss, store_validation_loss],
+        epoch_end_callbacks=callbacks,
         supervised=supervised)
 
-    return train_losses, validate_losses
+    if not supervised:
+        return train_losses, validate_losses
+
+    return train_losses, validate_losses, accuracies
 
 
 def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
