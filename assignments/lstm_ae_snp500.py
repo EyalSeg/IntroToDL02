@@ -4,6 +4,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+import os
+
 from torch.utils.data import DataLoader
 
 import utils
@@ -18,8 +20,35 @@ file = "../data/cache/S&P500.csv"
 DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 T.set_default_dtype(T.double)
 
+import math
+
+
+def daily_max_stock(stocks, title="Stocks"):
+    sd = stocks['date'][:round(len(stocks) * .1)]
+    sdv = stocks['dvolume'][:round(len(stocks) * .1)]
+
+    plt.plot(range(len(sdv)), sdv)
+    plt.title(title)
+    plt.xlabel("Days")
+    plt.ylabel("Max Dollar Volume")
+    plt.show()
+
+    print(f"First Date is: {sd.values[0]}\nLast Date is: {sd.values[math.floor(len(stocks) * .1)]}")
+
+
+def plot_max_stocks():
+    stocks = pd.read_csv('../data/cache/S&P500.csv')
+
+    google_stocks = stocks[stocks['symbol'] == 'GOOGL']
+    amazon_stocks = stocks[stocks['symbol'] == 'AMZN']
+
+    daily_max_stock(google_stocks, "Google Stocks")
+    daily_max_stock(amazon_stocks, "Amazon Stocks")
+
 
 if __name__ == "__main__":
+    plot_max_stocks()
+
     dataset = SyntheticDataset(file)
 
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2, seed=None)
@@ -27,7 +56,7 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     criterion = lambda output, input: mse(output.output_sequence, input)
 
-    should_tune = False # change to false to use predefined hyperparameters
+    should_tune = False  # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
             'epochs': [700],
@@ -40,9 +69,11 @@ if __name__ == "__main__":
             'grad_clipping': [None, 1],
         }
 
+
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
+
 
         best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
         best_params = LstmAEHyperparameters(**best_params)
@@ -108,5 +139,3 @@ if __name__ == "__main__":
         test_loss = criterion(output, test_set).item()
 
     print(f"Test loss: {test_loss}")
-
-
