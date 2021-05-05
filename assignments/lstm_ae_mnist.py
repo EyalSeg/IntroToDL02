@@ -72,7 +72,7 @@ if __name__ == "__main__":
         # return reconstruction_loss + classification_loss
         return reconstruction_loss
 
-    train_losses, validate_losses, accuracies = \
+    train_losses, validate_losses, train_accuracies, validation_accuracies = \
         utils.train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=True)
 
     pass

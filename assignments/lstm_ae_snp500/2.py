@@ -4,52 +4,21 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-import os
-
 from torch.utils.data import DataLoader
 
 import utils
 
-from data.synthetic_data import SyntheticDataset
 from grid_search import tune
 from utils import LstmAEHyperparameters
 
 sns.set_theme(style="darkgrid")
 
-file = "../data/cache/S&P500.csv"
+file = "../../data/cache/S&P500.csv"
 DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 T.set_default_dtype(T.double)
 
-import math
-
-
-def daily_max_stock(stocks, title="Stocks"):
-    sd = stocks['date'][:round(len(stocks) * .1)]
-    sdv = stocks['dvolume'][:round(len(stocks) * .1)]
-
-    plt.plot(range(len(sdv)), sdv)
-    plt.title(title)
-    plt.xlabel("Days")
-    plt.ylabel("Max Dollar Volume")
-    plt.show()
-
-    print(f"First Date is: {sd.values[0]}\nLast Date is: {sd.values[math.floor(len(stocks) * .1)]}")
-
-
-def plot_max_stocks():
-    stocks = pd.read_csv('../data/cache/S&P500.csv')
-
-    google_stocks = stocks[stocks['symbol'] == 'GOOGL']
-    amazon_stocks = stocks[stocks['symbol'] == 'AMZN']
-
-    daily_max_stock(google_stocks, "Google Stocks")
-    daily_max_stock(amazon_stocks, "Amazon Stocks")
-
-
 if __name__ == "__main__":
-    plot_max_stocks()
-
-    dataset = SyntheticDataset(file)
+    dataset = (pd.read_csv(file, index_col=False))
 
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2, seed=None)
 
@@ -97,6 +66,7 @@ if __name__ == "__main__":
         )
 
     best_seed = utils.cross_validation(dataset, best_params, iterations=1000)
+    print(f"Best seed is: {best_seed}")
 
     # Re-Build Data Out of "Best-Seed"
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2, seed=best_seed)
