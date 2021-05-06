@@ -35,7 +35,8 @@ class AEClassifierHyperparameters(LstmAEHyperparameters):
 if __name__ == "__main__":
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Lambda(lambda X: T.ravel(X).unsqueeze(-1))
+        #  transforms.Lambda(lambda X: T.ravel(X).unsqueeze(-1))
+        transforms.Lambda(lambda X: X.squeeze())
     ])
 
     train_data, validate_data, test_data = \
@@ -46,8 +47,8 @@ if __name__ == "__main__":
     test_data = T.utils.data.Subset(test_data, list(range(0, 20)))
 
     hyperparameters = AEClassifierHyperparameters(
-        epochs=700,
-        seq_dim=1,
+        epochs=1,
+        seq_dim=28,
         batch_size=64,
         n_classes=10,
 
@@ -69,10 +70,8 @@ if __name__ == "__main__":
         reconstruction_loss = mse(output.output_sequence, input_sequence)
         classification_loss = cel(output.label_predictions, labels)
 
-        # return reconstruction_loss + classification_loss
-        return reconstruction_loss
+        return reconstruction_loss + classification_loss
 
     train_losses, validate_losses, accuracies = \
         utils.train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=True)
 
-    pass
