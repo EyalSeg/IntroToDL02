@@ -106,7 +106,7 @@ def batch_loss(ae, batch, criterion, supervised=False):
         X = batch.to(DEVICE)
 
         output = ae.forward(X)
-        return criterion(output, batch)
+        return criterion(output, X)
 
 
 def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False):
