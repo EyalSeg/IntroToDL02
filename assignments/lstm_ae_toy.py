@@ -18,7 +18,6 @@ file = "../data/cache/synthetic.csv"
 DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 T.set_default_dtype(T.double)
 
-
 if __name__ == "__main__":
     dataset = SyntheticDataset(file)
 
@@ -27,7 +26,7 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     criterion = lambda output, input: mse(output.output_sequence, input)
 
-    should_tune = False # change to false to use predefined hyperparameters
+    should_tune = False  # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
             'epochs': [700],
@@ -40,9 +39,11 @@ if __name__ == "__main__":
             'grad_clipping': [None, 1],
         }
 
+
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
+
 
         best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
         best_params = LstmAEHyperparameters(**best_params)
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
     train_losses, validate_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params)
+        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params, verbose=True)
 
     utils.draw_sample(ae, test_data, n_samples=2)
 
@@ -93,4 +94,3 @@ if __name__ == "__main__":
         test_loss = criterion(output, test_set).item()
 
     print(f"Test loss: {test_loss}")
-

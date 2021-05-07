@@ -10,8 +10,11 @@ default_name = "cache/synthetic.csv"
 
 
 class SyntheticDataset(Dataset):
-    def __init__(self, filename=default_name):
-        self.data = (pd.read_csv(filename, index_col=False))
+    def __init__(self, filename=default_name, df=None):
+        if df is None:
+            self.data = (pd.read_csv(filename, index_col=False))
+        else:
+            self.data = df
 
     def __len__(self):
         return len(self.data)
