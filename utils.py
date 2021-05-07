@@ -239,3 +239,14 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
     plt.title(title)
     plt.show()
 
+
+def plot_metric(train_values, validation_values, metric_name):
+    df = pd.DataFrame.from_dict({"training set": train_values,
+                                 "validation set": validation_values})
+    df.index.name = "Epoch"
+
+    sns.lineplot(data=df, dashes=False)
+    plt.title(f"Learn {metric_name}")
+    plt.ylabel(metric_name)
+    plt.show()
+
