@@ -41,10 +41,22 @@ def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3),
             download=True,
             transform=transform
         )
+
+        test_data = dataset(
+            root=cache_path,
+            train=False,
+            download=True,
+            transform=transform
+        )
     else:
         train_data = dataset(
             root=cache_path,
             train=True,
+            download=True,
+        )
+        test_data = dataset(
+            root=cache_path,
+            train=False,
             download=True,
         )
     train_len = int(len(train_data) * train_validate_split[0])
@@ -52,12 +64,7 @@ def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3),
 
     train_data, validate_data = T.utils.data.random_split(train_data, [train_len, validate_len])
 
-    test_data = dataset(
-        root=cache_path,
-        train=False,
-        download=True,
-        transform=ToTensor()
-    )
+
 
     return train_data, validate_data, test_data
 
@@ -171,7 +178,7 @@ def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparamete
     return loss
 
 
-def draw_sample(ae, data, n_samples=1, title="example", type="line"):
+def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="line"):
     with T.no_grad():
         for _ in range(n_samples):
             idx = T.randint(len(data), (1,))
@@ -195,6 +202,33 @@ def draw_sample(ae, data, n_samples=1, title="example", type="line"):
 
             else:
                 raise Exception(f'type can be either "line" or "image", but was {type}.')
-            
+
             plt.title(title)
             plt.show()
+
+
+def draw_classification_sample(ae, data, n_samples=1, title="example", type="line"):
+    samples = T.utils.data.Subset(data, list(range(0, n_samples)))
+    loader = DataLoader(samples, batch_size=n_samples)
+    samples = next(iter(loader))
+    X, y = samples[0], samples[1]
+
+    with T.no_grad():
+        y_pred = ae.forward(X.to(DEVICE)).label_predictions
+        y_pred = T.argmax(y_pred, dim=-1).cpu()
+
+    if type == "image":
+        images = list(X)
+        labels = [tensor.item() for tensor in list(y_pred)]
+        labels = [str(label) for label in labels]
+
+        grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
+
+    elif type == "line":
+        raise NotImplemented(f"No support for drawing lines yet")
+    else:
+        raise Exception(f'type can be either "line" or "image", but was {type}.')
+
+    plt.title(title)
+    plt.show()
+
