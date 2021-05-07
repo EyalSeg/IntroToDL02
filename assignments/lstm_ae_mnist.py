@@ -42,9 +42,9 @@ if __name__ == "__main__":
     train_data, validate_data, test_data = \
         utils.load_torch_dataset(datasets.MNIST, transform=transform, cache_path="../data/cache")
 
-    train_data = T.utils.data.Subset(train_data, list(range(0, 100)))
-    validate_data = T.utils.data.Subset(validate_data, list(range(0, 20)))
-    test_data = T.utils.data.Subset(test_data, list(range(0, 20)))
+    train_data = T.utils.data.Subset(train_data, list(range(0, 1000)))
+    validate_data = T.utils.data.Subset(validate_data, list(range(0, 200)))
+    test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
 
     hyperparameters = AEClassifierHyperparameters(
         epochs=500,
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     ae = hyperparameters.create_ae()
 
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
-    validate_dataloader = DataLoader(train_data, batch_size=len(validate_data), shuffle=True)
+    validate_dataloader = DataLoader(validate_data, batch_size=len(validate_data), shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=len(test_data), shuffle=True)
 
     mse = nn.MSELoss()
@@ -73,11 +73,19 @@ if __name__ == "__main__":
 
         return reconstruction_loss + classification_loss
 
-    train_losses, validate_losses, accuracies = \
+    train_losses, validate_losses, train_accuracy, validate_accuracy = \
         utils.train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=True)
 
-    test_images = [tensor.reshape((28, 28)) for tensor, label in test_data]
+    utils.plot_metric(train_losses, validate_losses, "Loss")
+    utils.plot_metric(train_accuracy, validate_accuracy, "Accuracy")
+
+    test_images = [tensor for tensor, label in test_data]
     # test_sequences_dataloader = DataLoader(test_sequences, batch_size=len(test_data), shuffle=True)
 
-    utils.draw_sample(ae, test_images, n_samples=2, type="image")
+    utils.draw_reconstruction_sample(ae, test_images, n_samples=2, type="image")
+    utils.draw_classification_sample(ae, test_data, n_samples=9, type="image")
 
+    test_set = next(iter(test_dataloader))
+
+    test_loss = utils.batch_loss(ae, test_set, criterion, supervised=True)
+    print(f"Test loss: {test_loss}")
