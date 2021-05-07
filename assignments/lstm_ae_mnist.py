@@ -47,12 +47,12 @@ if __name__ == "__main__":
     test_data = T.utils.data.Subset(test_data, list(range(0, 20)))
 
     hyperparameters = AEClassifierHyperparameters(
-        epochs=1,
+        epochs=500,
         seq_dim=28,
         batch_size=64,
         n_classes=10,
 
-        num_layers=1,
+        num_layers=5,
         lr=0.001,
         latent_size=256,
         grad_clipping=None
@@ -62,6 +62,7 @@ if __name__ == "__main__":
 
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     validate_dataloader = DataLoader(train_data, batch_size=len(validate_data), shuffle=True)
+    test_dataloader = DataLoader(test_data, batch_size=len(test_data), shuffle=True)
 
     mse = nn.MSELoss()
     cel = nn.CrossEntropyLoss()
@@ -74,4 +75,9 @@ if __name__ == "__main__":
 
     train_losses, validate_losses, accuracies = \
         utils.train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=True)
+
+    test_images = [tensor.reshape((28, 28)) for tensor, label in test_data]
+    # test_sequences_dataloader = DataLoader(test_sequences, batch_size=len(test_data), shuffle=True)
+
+    utils.draw_sample(ae, test_images, n_samples=2, type="image")
 
