@@ -133,22 +133,29 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
 
     callbacks = [store_train_loss, store_validation_loss]
 
-    accuracies = []
+    train_accuracies = []
+    validate_accuracies = []
     if supervised:
-        def measure_accuracy(epoch, ae, train_loss):
-            validation_set = next(iter(validate_dataloader))
-            X, y = validation_set[0].to(DEVICE), validation_set[1].to(DEVICE)
-
+        def measure_accuracy(data_loader):
+            n_correct = 0
+            total = 0
             with T.no_grad():
-                output = ae.forward(X)
-                predictions = T.argmax(output.label_predictions, -1)
+                for batch in iter(data_loader):
 
-                correct = predictions.eq(y).sum().item()
-                accuracy = correct / predictions.shape[-1]
+                    X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
-            accuracies.append(accuracy)
+                    output = ae.forward(X)
+                    predictions = T.argmax(output.label_predictions, -1)
 
-        callbacks.append(measure_accuracy)
+                    n_correct += predictions.eq(y).sum().item()
+                    total += len(batch[0])
+
+            return n_correct / total
+
+        callbacks.append(lambda epoch, ae, train_loss:
+                         train_accuracies.append(measure_accuracy(train_dataloader)))
+        callbacks.append(lambda epoch, ae, train_loss:
+                         validate_accuracies.append(measure_accuracy(validate_dataloader)))
     fit(ae,
         train_dataloader,
         criterion,
@@ -159,7 +166,7 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
     if not supervised:
         return train_losses, validate_losses
 
-    return train_losses, validate_losses, accuracies
+    return train_losses, validate_losses, train_accuracies, validate_accuracies
 
 
 def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
