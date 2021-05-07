@@ -4,6 +4,7 @@ import torch.optim as optim
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import seaborn_image as isns
 
 from torchvision.transforms import ToTensor
 from dataclasses import dataclass
@@ -170,19 +171,30 @@ def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparamete
     return loss
 
 
-def draw_sample(ae, data, n_samples=1):
+def draw_sample(ae, data, n_samples=1, title="example", type="line"):
     with T.no_grad():
         for _ in range(n_samples):
             idx = T.randint(len(data), (1,))
-            sample = data[idx].to(DEVICE).unsqueeze(0)
+            sample_cpu = data[idx]
+            sample = sample_cpu.to(DEVICE).unsqueeze(0)
 
             output = ae.forward(sample).output_sequence
 
-            df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
-                                         'predicted': output.squeeze().tolist()})
-            df.index.name = "t"
+            if type == "line":
+                df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
+                                             'predicted': output.squeeze().tolist()})
+                df.index.name = "t"
 
-            sns.lineplot(data=df, dashes=False)
-            plt.title("example")
-            plt.ylabel("y")
+                sns.lineplot(data=df, dashes=False)
+                plt.ylabel("y")
+
+            elif type == "image":
+                images = [sample_cpu, output.squeeze(0).cpu()]
+                labels = ["original", "reconstructed"]
+                grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
+
+            else:
+                raise Exception(f'type can be either "line" or "image", but was {type}.')
+            
+            plt.title(title)
             plt.show()
