@@ -1,14 +1,7 @@
-import math
-from random import random
-
 import torch as T
 import torch.nn as nn
-import pandas as pd
 import seaborn as sns
-import numpy as np
-
 from torch.utils.data import DataLoader
-from data.synthetic_data import SyntheticDataset
 
 import utils
 
@@ -29,6 +22,7 @@ if __name__ == "__main__":
     find_best_seed = False
 
     if find_best_seed:
+        dataset = [train_data, valid_data, test_data]
         best_seed = utils.cross_validation(dataset, best_params, iterations=1000)
         print(f"Best seed is: {best_seed}")
 

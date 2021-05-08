@@ -10,11 +10,13 @@ default_name = "cache/synthetic.csv"
 
 
 class SyntheticDataset(Dataset):
-    def __init__(self, filename=default_name, df=None):
+    def __init__(self, filename=default_name, df=None, supervised=False):
         if df is None:
             self.data = (pd.read_csv(filename, index_col=False))
         else:
             self.data = df
+
+        self.supervised = supervised
 
     def __len__(self):
         return len(self.data)
@@ -39,5 +41,3 @@ if __name__ == "__main__":
     # df.index = list([f"x_{i}" for i in range(samples)])
 
     df.to_csv(args.destination, index=False)
-
-

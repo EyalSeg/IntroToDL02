@@ -186,6 +186,8 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
 
         epoch_losses = []
         for batch in iter(train_dataloader):
+            # if supervised:
+            #     batch = batch[:][0]
             if make_nans_average_check:
                 batch = make_nans_average(batch)
 
@@ -207,6 +209,8 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
 
 def batch_loss(ae, batch, criterion, supervised=False):
     if supervised:
+        # Add Next Data Input (X is X_t, y is X_t+1) Here at Regression!
+        # Or? no, it is batch[1]!
         X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
         output = ae.forward(X)
@@ -395,7 +399,7 @@ def print_results_and_plot_graph(ae, criterion, test_data, test_loader, best_par
     print(f"Test loss: {test_loss}")
 
 
-def fetch_and_split_data(file):
+def fetch_and_split_data(file, batch_size=64, supervised=False):
     dataset = (pd.read_csv(file, index_col=False))
     X = dataset['high']
     Y = dataset['symbol']
@@ -408,25 +412,43 @@ def fetch_and_split_data(file):
 
     n_train = n_data * 0.6
     n_validate = n_data * 0.2
-    n_test = n_data - n_train - n_validate
 
-    for i in range(n_data):
-        if not math.isnan(X[i]):
-            if i < n_train:
-                if df_train.get(Y[i]) is None:
-                    df_train[Y[i]] = [(X[i])]
+    if supervised:
+        for i in range(n_data - 1):
+            if not math.isnan(X[i]):
+                if i < n_train:
+                    if df_train.get(Y[i]) is None:
+                        df_train[Y[i]] = [(X[i], X[i + 1])]
+                    else:
+                        df_train[Y[i]].append((X[i], X[i+1]))
+                elif i < n_validate + n_train:
+                    if df_validate.get(Y[i]) is None:
+                        df_validate[Y[i]] = [(X[i], X[i + 1])]
+                    else:
+                        df_validate[Y[i]].append((X[i], X[i + 1]))
                 else:
-                    df_train[Y[i]].append(X[i])
-            elif i < n_validate + n_train:
-                if df_validate.get(Y[i]) is None:
-                    df_validate[Y[i]] = [(X[i])]
+                    if df_test.get(Y[i]) is None:
+                        df_test[Y[i]] = [(X[i], X[i + 1])]
+                    else:
+                        df_test[Y[i]].append((X[i], X[i + 1]))
+    else:
+        for i in range(n_data):
+            if not math.isnan(X[i]):
+                if i < n_train:
+                    if df_train.get(Y[i]) is None:
+                        df_train[Y[i]] = [(X[i])]
+                    else:
+                        df_train[Y[i]].append(X[i])
+                elif i < n_validate + n_train:
+                    if df_validate.get(Y[i]) is None:
+                        df_validate[Y[i]] = [(X[i])]
+                    else:
+                        df_validate[Y[i]].append(X[i])
                 else:
-                    df_validate[Y[i]].append(X[i])
-            else:
-                if df_test.get(Y[i]) is None:
-                    df_test[Y[i]] = [(X[i])]
-                else:
-                    df_test[Y[i]].append(X[i])
+                    if df_test.get(Y[i]) is None:
+                        df_test[Y[i]] = [(X[i])]
+                    else:
+                        df_test[Y[i]].append(X[i])
 
     for key in df_train:
         df_train[key] = pd.Series(df_train[key])
@@ -438,12 +460,12 @@ def fetch_and_split_data(file):
         df_test[key] = pd.Series(df_test[key])
 
     dataframe_train = pd.DataFrame(df_train)
-    train_data = SyntheticDataset(filename=None, df=dataframe_train)
+    train_data = SyntheticDataset(filename=None, df=dataframe_train, supervised=supervised)
 
     dataframe_validate = pd.DataFrame(df_validate)
-    valid_data = SyntheticDataset(filename=None, df=dataframe_validate)
+    valid_data = SyntheticDataset(filename=None, df=dataframe_validate, supervised=supervised)
 
     dataframe_test = pd.DataFrame(df_test)
-    test_data = SyntheticDataset(filename=None, df=dataframe_test)
+    test_data = SyntheticDataset(filename=None, df=dataframe_test, supervised=supervised)
 
     return train_data, valid_data, test_data
