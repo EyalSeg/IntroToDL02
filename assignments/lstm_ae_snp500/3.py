@@ -16,6 +16,8 @@ T.set_default_dtype(T.double)
 
 
 @dataclass(frozen=True)
+# AERegressionHyperparameters
+# Same Structure as the AE-Classifier Class
 class AERegressionHyperparameters(utils.LstmAEHyperparameters):
     output_dimension: int
 
@@ -25,6 +27,7 @@ class AERegressionHyperparameters(utils.LstmAEHyperparameters):
 
 
 if __name__ == "__main__":
+    # Fetch the S&P500 Data Set
     train_data, valid_data, test_data = utils.fetch_and_split_data(file, supervised=True, batch_size=64)
 
     # Change Those Parameters to The Best Parameters.
@@ -57,11 +60,13 @@ if __name__ == "__main__":
         # return reconstruction_loss + classification_loss
         return reconstruction_loss
 
-
+    # TODO - Fix Data Building for the Regression Model
+    # Or, fix the Model data using (adopt for Regression)
     train_losses, validate_losses, train_accuracies, validation_accuracies = \
         utils.train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters,
                                 verbose=True, make_nans_average_check=True, supervised=True)
 
+    # TODO - Adopt the New Print Methods recently added
     utils.print_results_and_plot_graph(ae, criterion, test_data, test_loader, hyperparameters, train_losses,
                                        validate_losses,
                                        train_accuracies, validation_accuracies,

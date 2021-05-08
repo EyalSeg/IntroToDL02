@@ -22,7 +22,15 @@ class SyntheticDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        return T.tensor(self.data.loc[index].values).unsqueeze(-1)
+        if not self.supervised:
+            return T.tensor(self.data.loc[index].values).unsqueeze(-1)
+        else:
+            # TODO - Return the "true-value" out of self.data
+            # If the Supervised Flag is False
+            # We should return the X value out of Data
+            # (That contains X and Y, such that, X is x[t], and Y is x[t+1]).
+            value = T.tensor(self.data.loc[index].values[0]).unsqueeze(-1)
+            return value
 
 
 if __name__ == "__main__":

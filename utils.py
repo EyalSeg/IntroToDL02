@@ -8,10 +8,10 @@ import torch.optim as optim
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import seaborn_image as isns
+import seaborn as isns
 import numpy as np
 
-from pytorch_metric_learning import losses, reducers
+# from pytorch_metric_learning import losses, reducers
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union
@@ -39,8 +39,7 @@ class LstmAEHyperparameters:
         return LstmAutoEncoder(self.seq_dim, self.latent_size, self.num_layers)
 
 
-def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
-
+def load_torch_dataset(dataset, transform=None, train_validate_split=(2 / 3, 1 / 3), cache_path='/data/cache'):
     if transform:
         train_data = dataset(
             root=cache_path,
@@ -90,6 +89,11 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
     return train_data, valid_data, test_data
 
 
+# Cross-Validation
+# Go over data set for a number of iterations.
+# Save Metric of each iteration
+# Compare Metrics for each seed
+# Return the "Best-Metric" Seed.
 def cross_validation(dataset, best_params, iterations=1000):
     train_losses_data = [], validate_losses_data = [], train_accuracies_data = [], validation_accuracies_data = [], test_loss_data = []
     seeds = []
@@ -154,6 +158,10 @@ def cross_validation(dataset, best_params, iterations=1000):
     return best_seed
 
 
+# Make Nans Average
+# Will go over the batch
+# And Replace each "NaN" Entry
+# to an "Batch-Average" Value.
 def make_nans_average(batch):
     sum = 0
     nan_indices = []
@@ -269,7 +277,6 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
             total = 0
             with T.no_grad():
                 for batch in iter(data_loader):
-
                     X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
                     output = ae.forward(X)
@@ -378,3 +385,121 @@ def plot_metric(train_values, validation_values, metric_name):
     plt.ylabel(metric_name)
     plt.show()
 
+
+# Tune Parameters Original Function
+def tune_parameters(train_data, valid_data, criterion, should_tune=False):
+    if should_tune:
+        param_choices = {
+            'epochs': [700],
+            'seq_dim': [1],
+            'batch_size': [128],
+            'num_layers': [2],
+            'latent_size': [256],
+            'lr': [0.0001, 0.001],
+            'grad_clipping': [None, 1],
+        }
+
+        def tune_objective(**params):
+            hyperparameters = LstmAEHyperparameters(**params)
+            return evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
+
+        best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
+        best_params = LstmAEHyperparameters(**best_params)
+
+        print("Best parameters are:")
+        print(f"\tlatent size: {best_params.latent_size}")
+        print(f"\tlr: {best_params.lr}")
+        print(f"\tgrad_clipping: {best_params.grad_clipping}")
+        print(f"\tnum_layers: {best_params.num_layers}")
+
+    else:
+        best_params = LstmAEHyperparameters(
+            epochs=500,
+            seq_dim=1,
+            batch_size=128,
+
+            num_layers=5,
+            lr=0.001,
+            latent_size=256,
+            grad_clipping=None
+        )
+
+    return best_params
+
+
+# Fetch and Split Data For the S&P500 Data Set
+# Supervised Flag is for "Supervised" Indication
+# Supervised Flag will be False for Task 3.3.2, and True for Task 3.3.3
+# The method uses "SyntheticDataset" Class.
+def fetch_and_split_data(file, supervised=False, batch_size=64):
+    dataset = (pd.read_csv(file, index_col=False))
+    X = dataset['high']
+    Y = dataset['symbol']
+
+    df_train = {}
+    df_test = {}
+    df_validate = {}
+
+    n_data = np.shape(X)[0]
+
+    n_train = n_data * 0.6
+    n_validate = n_data * 0.2
+
+    if not supervised:
+        for i in range(n_data):
+            if not math.isnan(X[i]):
+                if i < n_train:
+                    if df_train.get(Y[i]) is None:
+                        df_train[Y[i]] = [(X[i])]
+                    else:
+                        df_train[Y[i]].append(X[i])
+                elif i < n_validate + n_train:
+                    if df_validate.get(Y[i]) is None:
+                        df_validate[Y[i]] = [(X[i])]
+                    else:
+                        df_validate[Y[i]].append(X[i])
+                else:
+                    if df_test.get(Y[i]) is None:
+                        df_test[Y[i]] = [(X[i])]
+                    else:
+                        df_test[Y[i]].append(X[i])
+    else:
+        # TODO - Need to Adopt Parameters to fit Regression
+        # The Logic is: for each Pair <X, Y> X is x[t] and Y is x[t+1].
+        for i in range(n_data - 1):
+            if not math.isnan(X[i]):
+                if i < n_train:
+                    if df_train.get(Y[i]) is None:
+                        df_train[Y[i]] = [(X[i], X[i + 1])]
+                    else:
+                        df_train[Y[i]].append((X[i], X[i + 1]))
+                elif i < n_validate + n_train:
+                    if df_validate.get(Y[i]) is None:
+                        df_validate[Y[i]] = [(X[i], X[i + 1])]
+                    else:
+                        df_validate[Y[i]].append((X[i], X[i + 1]))
+                else:
+                    if df_test.get(Y[i]) is None:
+                        df_test[Y[i]] = [(X[i], X[i + 1])]
+                    else:
+                        df_test[Y[i]].append((X[i], X[i + 1]))
+
+    for key in df_train:
+        df_train[key] = pd.Series(df_train[key])
+
+    for key in df_validate:
+        df_validate[key] = pd.Series(df_validate[key])
+
+    for key in df_test:
+        df_test[key] = pd.Series(df_test[key])
+
+    dataframe_train = pd.DataFrame(df_train)
+    train_data = SyntheticDataset(filename=None, df=dataframe_train)
+
+    dataframe_validate = pd.DataFrame(df_validate)
+    valid_data = SyntheticDataset(filename=None, df=dataframe_validate)
+
+    dataframe_test = pd.DataFrame(df_test)
+    test_data = SyntheticDataset(filename=None, df=dataframe_test)
+
+    return train_data, valid_data, test_data

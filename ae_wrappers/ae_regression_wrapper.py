@@ -13,6 +13,11 @@ class AutoencoderRegressionOutput(AutoencoderOutput):
     label_predictions: T.Tensor
 
 
+# Similar to the AE-Classifier Class
+# No Activation Function,
+# Output layer dimensions
+# Will be the same as the Input Layer dimensions
+# Of the AE-Model (Input dimension is the same as the Output dimension).
 class AutoEncoderRegression(nn.Module):
     def __init__(self, ae, output_dimension):
         super(AutoEncoderRegression, self).__init__()
