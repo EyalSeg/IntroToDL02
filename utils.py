@@ -3,13 +3,15 @@ import math
 
 import torch as T
 import torch.nn as nn
+import numpy as np
 import torch.optim as optim
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import seaborn_image as isns
 import numpy as np
 
-from torchvision.transforms import ToTensor
+from pytorch_metric_learning import losses, reducers
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union
@@ -37,11 +39,19 @@ class LstmAEHyperparameters:
         return LstmAutoEncoder(self.seq_dim, self.latent_size, self.num_layers)
 
 
-def load_torch_dataset(dataset, transform=None, train_validate_split=(2 / 3, 1 / 3), cache_path='/data/cache'):
+def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
+
     if transform:
         train_data = dataset(
             root=cache_path,
             train=True,
+            download=True,
+            transform=transform
+        )
+
+        test_data = dataset(
+            root=cache_path,
+            train=False,
             download=True,
             transform=transform
         )
@@ -51,17 +61,15 @@ def load_torch_dataset(dataset, transform=None, train_validate_split=(2 / 3, 1 /
             train=True,
             download=True,
         )
+        test_data = dataset(
+            root=cache_path,
+            train=False,
+            download=True,
+        )
     train_len = int(len(train_data) * train_validate_split[0])
     validate_len = int(len(train_data) * train_validate_split[1])
 
     train_data, validate_data = T.utils.data.random_split(train_data, [train_len, validate_len])
-
-    test_data = dataset(
-        root=cache_path,
-        train=False,
-        download=True,
-        transform=ToTensor()
-    )
 
     return train_data, validate_data, test_data
 
@@ -184,10 +192,8 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
     for epoch in range(hyperparameters.epochs):
         optimizer.zero_grad()
 
-        epoch_losses = []
+        epoch_losses, batch_sizes = [], []
         for batch in iter(train_dataloader):
-            # if supervised:
-            #     batch = batch[:][0]
             if make_nans_average_check:
                 batch = make_nans_average(batch)
 
@@ -200,17 +206,26 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
             optimizer.step()
 
             epoch_losses.append(loss.item())
+            batch_sizes.append(len(batch))
 
-        epoch_loss = sum(epoch_losses) / len(epoch_losses)
+        epoch_loss = np.average(epoch_losses, weights=batch_sizes)
 
         for callback in epoch_end_callbacks:
             callback(epoch, ae, epoch_loss)
 
 
+def epoch_loss(ae, dataloder, criterion, supervised=False):
+    losses, batch_sizes = [], []
+
+    for batch in iter(dataloder):
+        losses.append(batch_loss(ae, batch, criterion, supervised=supervised).item())
+        batch_sizes.append(len(batch))
+
+    return np.average(losses, weights=batch_sizes)
+
+
 def batch_loss(ae, batch, criterion, supervised=False):
     if supervised:
-        # Add Next Data Input (X is X_t, y is X_t+1) Here at Regression!
-        # Or? no, it is batch[1]!
         X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
         output = ae.forward(X)
@@ -219,7 +234,7 @@ def batch_loss(ae, batch, criterion, supervised=False):
         X = batch.to(DEVICE)
 
         output = ae.forward(X)
-        return criterion(output, batch)
+        return criterion(output, X)
 
 
 def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False,
@@ -233,15 +248,15 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
         print(f"Epoch: {epoch}, Loss: {loss}")
 
     def store_validation_loss(epoch, ae, train_loss):
-        validation_set = next(iter(validate_dataloader))
-
         with T.no_grad():
-            loss = batch_loss(ae, validation_set, criterion, supervised=supervised).item()
+            loss = epoch_loss(ae, validate_dataloader, criterion, supervised=supervised)
 
         validate_losses.append(loss)
 
     callbacks = [store_train_loss, store_validation_loss]
 
+    train_accuracies = []
+    validate_accuracies = []
     if verbose:
         callbacks.append(verbose_print)
 
@@ -249,33 +264,26 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
     train_accuracies = []
 
     if supervised:
-        def measure_accuracy(epoch, ae, train_loss, verbose=False):
-            train_set = next(iter(train_dataloader))
-            X_train, y_train = train_set[0].to(DEVICE), train_set[1].to(DEVICE)
-
-            validation_set = next(iter(validate_dataloader))
-            X_val, y_val = validation_set[0].to(DEVICE), validation_set[1].to(DEVICE)
-
+        def measure_accuracy(data_loader):
+            n_correct = 0
+            total = 0
             with T.no_grad():
-                output_val = ae.forward(X_val)
-                predictions_val = T.argmax(output_val.label_predictions, -1)
+                for batch in iter(data_loader):
 
-                correct_val = predictions_val.eq(y_val).sum().item()
-                accuracy_val = correct_val / predictions_val.shape[-1]
+                    X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
-                output_train = ae.forward(X_train)
-                predictions_train = T.argmax(output_train.label_predictions, -1)
+                    output = ae.forward(X)
+                    predictions = T.argmax(output.label_predictions, -1)
 
-                correct_train = predictions_train.eq(y_train).sum().item()
-                accuracy_train = correct_train / predictions_train.shape[-1]
+                    n_correct += predictions.eq(y).sum().item()
+                    total += len(batch[0])
 
-                if verbose:
-                    print(f"Epoch: {epoch}, Train Accuracy: {accuracy_train}, Validation Accuracy: {accuracy_val}")
+            return n_correct / total
 
-            validation_accuracies.append(accuracy_val)
-            train_accuracies.append(accuracy_train)
-
-        callbacks.append(measure_accuracy)
+        callbacks.append(lambda epoch, ae, train_loss:
+                         train_accuracies.append(measure_accuracy(train_dataloader)))
+        callbacks.append(lambda epoch, ae, train_loss:
+                         validate_accuracies.append(measure_accuracy(validate_dataloader)))
     fit(ae,
         train_dataloader,
         criterion,
@@ -287,7 +295,7 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
     if not supervised:
         return train_losses, validate_losses
 
-    return train_losses, validate_losses, train_accuracies, validation_accuracies
+    return train_losses, validate_losses, train_accuracies, validate_accuracies
 
 
 def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters: LstmAEHyperparameters,
@@ -298,174 +306,75 @@ def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparamete
     fit(ae, train_dataloader, criterion, hyperparameters, supervised=supervised)
 
     validate_loader = DataLoader(validate_data, batch_size=len(validate_data))
-    validation_set = next(iter(validate_loader)).to(DEVICE)
 
     with T.no_grad():
-        output = ae.forward(validation_set)
-        loss = criterion(output, validation_set).item()
+        loss = epoch_loss(ae, validate_loader, criterion, supervised=supervised)
 
     return loss
 
 
-def draw_sample(ae, data, n_samples=1, title="example"):
+def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="line"):
     with T.no_grad():
         for _ in range(n_samples):
             idx = T.randint(len(data), (1,))
-            sample = data[idx].to(DEVICE).unsqueeze(0)
+            sample_cpu = data[idx]
+            sample = sample_cpu.to(DEVICE).unsqueeze(0)
 
             output = ae.forward(sample).output_sequence
 
-            df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
-                                         'predicted': output.squeeze().tolist()})
-            df.index.name = "t"
+            if type == "line":
+                df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
+                                             'predicted': output.squeeze().tolist()})
+                df.index.name = "t"
 
-            sns.lineplot(data=df, dashes=False)
+                sns.lineplot(data=df, dashes=False)
+                plt.ylabel("y")
+
+            elif type == "image":
+                images = [sample_cpu, output.squeeze(0).cpu()]
+                labels = ["original", "reconstructed"]
+                grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
+
+            else:
+                raise Exception(f'type can be either "line" or "image", but was {type}.')
+
             plt.title(title)
-            plt.ylabel("y")
             plt.show()
 
 
-def tune_parameters(train_data, valid_data, criterion, should_tune=False):
-    if should_tune:
-        param_choices = {
-            'epochs': [700],
-            'seq_dim': [1],
-            'batch_size': [128],
-            'num_layers': [2],
-            'latent_size': [256],
-            'lr': [0.0001, 0.001],
-            'grad_clipping': [None, 1],
-        }
-
-        def tune_objective(**params):
-            hyperparameters = LstmAEHyperparameters(**params)
-            return evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
-
-        best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
-        best_params = LstmAEHyperparameters(**best_params)
-
-        print("Best parameters are:")
-        print(f"\tlatent size: {best_params.latent_size}")
-        print(f"\tlr: {best_params.lr}")
-        print(f"\tgrad_clipping: {best_params.grad_clipping}")
-        print(f"\tnum_layers: {best_params.num_layers}")
-
-    else:
-        best_params = LstmAEHyperparameters(
-            epochs=500,
-            seq_dim=1,
-            batch_size=128,
-
-            num_layers=5,
-            lr=0.001,
-            latent_size=256,
-            grad_clipping=None
-        )
-
-    return best_params
-
-
-def print_results_and_plot_graph(ae, criterion, test_data, test_loader, best_params, train_losses, validate_losses,
-                                 train_accuracy, validate_accuracy,
-                                 title, is_supervised=False):
-    draw_sample(ae, test_data, n_samples=2, title=title)
-
-    df = pd.DataFrame.from_dict({"training set": train_losses,
-                                 "validation set": validate_losses})
-    df.index.name = "Epoch"
-    sns.lineplot(data=df, dashes=False)
-    lr_str = "{:12.7f}".format(best_params.lr)
-    plt.title(title)
-    plt.ylabel("Loss")
-    plt.show()
-
-    if is_supervised:
-        df = pd.DataFrame.from_dict({"training set": train_accuracy,
-                                     "validation set": validate_accuracy})
-        df.index.name = "Epoch"
-
-        sns.lineplot(data=df, dashes=False)
-        lr_str = "{:12.7f}".format(best_params.lr)
-        plt.title(title)
-        plt.ylabel("Accuracy")
-        plt.show()
-
-    test_set = next(iter(test_loader)).to(DEVICE)
+def draw_classification_sample(ae, data, n_samples=1, title="example", type="line"):
+    samples = T.utils.data.Subset(data, list(range(0, n_samples)))
+    loader = DataLoader(samples, batch_size=n_samples)
+    samples = next(iter(loader))
+    X, y = samples[0], samples[1]
 
     with T.no_grad():
-        output = ae.forward(test_set)
-        test_loss = criterion(output, test_set).item()
+        y_pred = ae.forward(X.to(DEVICE)).label_predictions
+        y_pred = T.argmax(y_pred, dim=-1).cpu()
 
-    print(f"Test loss: {test_loss}")
+    if type == "image":
+        images = list(X)
+        labels = [tensor.item() for tensor in list(y_pred)]
+        labels = [str(label) for label in labels]
 
+        grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
 
-def fetch_and_split_data(file, batch_size=64, supervised=False):
-    dataset = (pd.read_csv(file, index_col=False))
-    X = dataset['high']
-    Y = dataset['symbol']
-
-    df_train = {}
-    df_test = {}
-    df_validate = {}
-
-    n_data = np.shape(X)[0]
-
-    n_train = n_data * 0.6
-    n_validate = n_data * 0.2
-
-    if supervised:
-        for i in range(n_data - 1):
-            if not math.isnan(X[i]):
-                if i < n_train:
-                    if df_train.get(Y[i]) is None:
-                        df_train[Y[i]] = [(X[i], X[i + 1])]
-                    else:
-                        df_train[Y[i]].append((X[i], X[i+1]))
-                elif i < n_validate + n_train:
-                    if df_validate.get(Y[i]) is None:
-                        df_validate[Y[i]] = [(X[i], X[i + 1])]
-                    else:
-                        df_validate[Y[i]].append((X[i], X[i + 1]))
-                else:
-                    if df_test.get(Y[i]) is None:
-                        df_test[Y[i]] = [(X[i], X[i + 1])]
-                    else:
-                        df_test[Y[i]].append((X[i], X[i + 1]))
+    elif type == "line":
+        raise NotImplemented(f"No support for drawing lines yet")
     else:
-        for i in range(n_data):
-            if not math.isnan(X[i]):
-                if i < n_train:
-                    if df_train.get(Y[i]) is None:
-                        df_train[Y[i]] = [(X[i])]
-                    else:
-                        df_train[Y[i]].append(X[i])
-                elif i < n_validate + n_train:
-                    if df_validate.get(Y[i]) is None:
-                        df_validate[Y[i]] = [(X[i])]
-                    else:
-                        df_validate[Y[i]].append(X[i])
-                else:
-                    if df_test.get(Y[i]) is None:
-                        df_test[Y[i]] = [(X[i])]
-                    else:
-                        df_test[Y[i]].append(X[i])
+        raise Exception(f'type can be either "line" or "image", but was {type}.')
 
-    for key in df_train:
-        df_train[key] = pd.Series(df_train[key])
+    plt.title(title)
+    plt.show()
 
-    for key in df_validate:
-        df_validate[key] = pd.Series(df_validate[key])
 
-    for key in df_test:
-        df_test[key] = pd.Series(df_test[key])
+def plot_metric(train_values, validation_values, metric_name):
+    df = pd.DataFrame.from_dict({"training set": train_values,
+                                 "validation set": validation_values})
+    df.index.name = "Epoch"
 
-    dataframe_train = pd.DataFrame(df_train)
-    train_data = SyntheticDataset(filename=None, df=dataframe_train, supervised=supervised)
+    sns.lineplot(data=df, dashes=False)
+    plt.title(f"Learn {metric_name}")
+    plt.ylabel(metric_name)
+    plt.show()
 
-    dataframe_validate = pd.DataFrame(df_validate)
-    valid_data = SyntheticDataset(filename=None, df=dataframe_validate, supervised=supervised)
-
-    dataframe_test = pd.DataFrame(df_test)
-    test_data = SyntheticDataset(filename=None, df=dataframe_test, supervised=supervised)
-
-    return train_data, valid_data, test_data

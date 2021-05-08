@@ -58,9 +58,9 @@ if __name__ == "__main__":
         best_params = LstmAEHyperparameters(
             epochs=700,
             seq_dim=1,
-            batch_size=128,
+            batch_size=256,
 
-            num_layers=2,
+            num_layers=5,
             lr=0.001,
             latent_size=256,
             grad_clipping=None
@@ -75,17 +75,8 @@ if __name__ == "__main__":
     train_losses, validate_losses = \
         utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params, verbose=True)
 
-    utils.draw_sample(ae, test_data, n_samples=2)
-
-    df = pd.DataFrame.from_dict({"training set": train_losses,
-                                 "validation set": validate_losses})
-    df.index.name = "Epoch"
-
-    sns.lineplot(data=df, dashes=False)
-    lr_str = "{:12.7f}".format(best_params.lr)
-    plt.title("Learn Loss")
-    plt.ylabel("Loss")
-    plt.show()
+    utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
+    utils.plot_metric(train_losses, validate_losses, "Loss")
 
     test_set = next(iter(test_loader)).to(DEVICE)
 
