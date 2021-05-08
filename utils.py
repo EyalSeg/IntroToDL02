@@ -1,12 +1,13 @@
 import torch as T
 import torch.nn as nn
+import numpy as np
 import torch.optim as optim
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import seaborn_image as isns
 
-from torchvision.transforms import ToTensor
+from pytorch_metric_learning import losses, reducers
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union
@@ -64,8 +65,6 @@ def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3),
 
     train_data, validate_data = T.utils.data.random_split(train_data, [train_len, validate_len])
 
-
-
     return train_data, validate_data, test_data
 
 
@@ -86,7 +85,7 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
     for epoch in range(hyperparameters.epochs):
         optimizer.zero_grad()
 
-        epoch_losses = []
+        epoch_losses, batch_sizes = [], []
         for batch in iter(train_dataloader):
             loss = batch_loss(ae, batch, criterion, supervised=supervised)
             loss.backward()
@@ -97,11 +96,22 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
             optimizer.step()
 
             epoch_losses.append(loss.item())
+            batch_sizes.append(len(batch))
 
-        epoch_loss = sum(epoch_losses) / len(epoch_losses)
+        epoch_loss = np.average(epoch_losses, weights=batch_sizes)
 
         for callback in epoch_end_callbacks:
             callback(epoch, ae, epoch_loss)
+
+
+def epoch_loss(ae, dataloder, criterion, supervised=False):
+    losses, batch_sizes = [], []
+
+    for batch in iter(dataloder):
+        losses.append(batch_loss(ae, batch, criterion, supervised=supervised).item())
+        batch_sizes.append(len(batch))
+
+    return np.average(losses, weights=batch_sizes)
 
 
 def batch_loss(ae, batch, criterion, supervised=False):
@@ -124,10 +134,8 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
     store_train_loss = lambda epoch, ae, loss: train_losses.append(loss)
 
     def store_validation_loss(epoch, ae, train_loss):
-        validation_set = next(iter(validate_dataloader))
-
         with T.no_grad():
-            loss = batch_loss(ae, validation_set, criterion, supervised=supervised).item()
+            loss = epoch_loss(ae, validate_dataloader, criterion, supervised=supervised)
 
         validate_losses.append(loss)
 
@@ -176,11 +184,9 @@ def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparamete
     fit(ae, train_dataloader, criterion, hyperparameters, supervised=supervised)
 
     validate_loader = DataLoader(validate_data, batch_size=len(validate_data))
-    validation_set = next(iter(validate_loader)).to(DEVICE)
 
     with T.no_grad():
-        output = ae.forward(validation_set)
-        loss = criterion(output, validation_set).item()
+        loss = epoch_loss(ae, validate_loader, criterion, supervised=supervised)
 
     return loss
 
