@@ -42,12 +42,12 @@ if __name__ == "__main__":
     train_data, validate_data, test_data = \
         utils.load_torch_dataset(datasets.MNIST, transform=transform, cache_path="../data/cache")
 
-    train_data = T.utils.data.Subset(train_data, list(range(0, 1000)))
-    validate_data = T.utils.data.Subset(validate_data, list(range(0, 200)))
-    test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
+    # train_data = T.utils.data.Subset(train_data, list(range(0, 1000)))
+    # validate_data = T.utils.data.Subset(validate_data, list(range(0, 200)))
+    # test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
 
     hyperparameters = AEClassifierHyperparameters(
-        epochs=500,
+        epochs=250,
         seq_dim=28,
         batch_size=64,
         n_classes=10,
@@ -61,8 +61,8 @@ if __name__ == "__main__":
     ae = hyperparameters.create_ae()
 
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
-    validate_dataloader = DataLoader(validate_data, batch_size=len(validate_data), shuffle=True)
-    test_dataloader = DataLoader(test_data, batch_size=len(test_data), shuffle=True)
+    validate_dataloader = DataLoader(validate_data, batch_size=hyperparameters.batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_data, batch_size=hyperparameters.batch_size, shuffle=True)
 
     mse = nn.MSELoss()
     cel = nn.CrossEntropyLoss()
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     utils.draw_reconstruction_sample(ae, test_images, n_samples=2, type="image")
     utils.draw_classification_sample(ae, test_data, n_samples=9, type="image")
 
-    test_set = next(iter(test_dataloader))
+    with T.no_grad():
+        test_loss = utils.epoch_loss(ae, test_dataloader, criterion, supervised=True)
 
-    test_loss = utils.batch_loss(ae, test_set, criterion, supervised=True)
     print(f"Test loss: {test_loss}")
