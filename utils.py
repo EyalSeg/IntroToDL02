@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import seaborn_image as isns
 
-from pytorch_metric_learning import losses, reducers
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union
@@ -33,8 +32,7 @@ class LstmAEHyperparameters:
         return LstmAutoEncoder(self.seq_dim, self.latent_size, self.num_layers)
 
 
-def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
-
+def load_torch_dataset(dataset, transform=None, train_validate_split=(2 / 3, 1 / 3), cache_path='/data/cache'):
     if transform:
         train_data = dataset(
             root=cache_path,
@@ -79,7 +77,9 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
     return train_data, valid_data, test_data
 
 
-def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(), supervised=False):
+def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters, epoch_end_callbacks=(),
+        supervised=False,
+        verbose=False):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
@@ -99,6 +99,9 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
             batch_sizes.append(len(batch))
 
         epoch_loss = np.average(epoch_losses, weights=batch_sizes)
+
+        if verbose:
+            print(f"Epoch: {epoch}, Epoch Loss (train): {epoch_loss}")
 
         for callback in epoch_end_callbacks:
             callback(epoch, ae, epoch_loss)
@@ -127,7 +130,8 @@ def batch_loss(ae, batch, criterion, supervised=False):
         return criterion(output, X)
 
 
-def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False):
+def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False,
+                      verbose=False):
     train_losses = []
     validate_losses = []
 
@@ -149,7 +153,6 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
             total = 0
             with T.no_grad():
                 for batch in iter(data_loader):
-
                     X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
                     output = ae.forward(X)
@@ -169,7 +172,9 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
         criterion,
         hyperparameters,
         epoch_end_callbacks=callbacks,
-        supervised=supervised)
+        supervised=supervised,
+        verbose=verbose
+        )
 
     if not supervised:
         return train_losses, validate_losses
@@ -177,7 +182,8 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
     return train_losses, validate_losses, train_accuracies, validate_accuracies
 
 
-def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
+def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters: LstmAEHyperparameters,
+                             supervised=False):
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
 
@@ -200,18 +206,31 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
 
             output = ae.forward(sample).output_sequence
 
+            s = np.array(sample.squeeze().tolist())
+            o = np.array(output.squeeze().tolist())
+
             if type == "line":
-                df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
-                                             'predicted': output.squeeze().tolist()})
-                df.index.name = "t"
+                df = pd.DataFrame.from_dict({'actual': s,
+                                             'predicted': o})
+                df.index.name = "Time Step"
 
                 sns.lineplot(data=df, dashes=False)
-                plt.ylabel("y")
+                plt.title(title)
+                plt.ylabel("Data Value")
 
             elif type == "image":
                 images = [sample_cpu, output.squeeze(0).cpu()]
                 labels = ["original", "reconstructed"]
                 grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
+
+            elif type == "text":
+                d = abs(s - o)
+                p = d / np.maximum(s, o)
+                ad = np.average(d)
+                ap = np.average(p)
+                print(f"Sample is: {s}\n, Output is: {o}\nDifferences are: {d}\n" + \
+                      f"Difference percentages are: {p}\nAverage Difference is: {ad}\nAverage Difference Percentages "
+                      f"is: {ap}\n")
 
             else:
                 raise Exception(f'type can be either "line" or "image", but was {type}.')
@@ -255,4 +274,3 @@ def plot_metric(train_values, validation_values, metric_name):
     plt.title(f"Learn {metric_name}")
     plt.ylabel(metric_name)
     plt.show()
-
