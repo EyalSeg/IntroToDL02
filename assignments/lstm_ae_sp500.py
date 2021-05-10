@@ -16,7 +16,7 @@ if __name__ == "__main__":
     criterion = lambda output, input: mse(output.output_sequence, input)
 
     hyperparameters = utils.LstmAEHyperparameters(
-        epochs=5,
+        epochs=10,
         seq_dim=1,
         batch_size=64,
 

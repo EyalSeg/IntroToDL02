@@ -59,10 +59,10 @@ if __name__ == "__main__":
             seq_dim=1,
             batch_size=256,
 
-            num_layers=5,
+            num_layers=2,
             lr=0.001,
             latent_size=256,
-            grad_clipping=None
+            grad_clipping=2 ** 8
         )
 
     ae = best_params.create_ae()
