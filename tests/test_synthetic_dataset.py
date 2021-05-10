@@ -13,6 +13,7 @@ expected_length = 10
 seq_dim = 1
 seq_length = 5
 
+
 class Test_SyntheticDataset():
 
     @pytest.fixture()
@@ -24,7 +25,7 @@ class Test_SyntheticDataset():
 
     @pytest.mark.parametrize("index,expected_item", [
         (0, [0.7237234150137297, 0.13946122270849692, 0.8342476974452179, 0.5342173378336755, 0.33221789790952283]),
-        (5, [0.24418778729303547,0.6655126266117972,0.6075295206183552,0.4758907741561006,0.5343760325320923]),
+        (5, [0.24418778729303547, 0.6655126266117972, 0.6075295206183552, 0.4758907741561006, 0.5343760325320923]),
     ])
     def test_item(self, dataset, index, expected_item):
         actual = dataset[index]
@@ -38,4 +39,3 @@ class Test_SyntheticDataset():
         batch = next(iter(loader))
 
         assert batch.shape == (batch_size, seq_length, seq_dim)
-

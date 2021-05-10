@@ -1,8 +1,8 @@
+import sys
+
 import torch as T
 import torch.nn as nn
-import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
 
 from torch.utils.data import DataLoader
 
@@ -30,14 +30,14 @@ if __name__ == "__main__":
     should_tune = False # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
-            'epochs': [700],
+            'epochs': [1000],
             'seq_dim': [1],
-            'batch_size': [128],
-            'num_layers': [2],
+            'batch_size': [512],
+            'num_layers': [3],
             'latent_size': [256],
-            'lr': [0.0001, 0.001],
+            'lr': [0.001],
             # 'grad_clipping': [None, 0.01, 0.1, 0.5, 1, 2],
-            'grad_clipping': [None, 1],
+            'grad_clipping': [-2 ** 8, 2 ** 8],
         }
 
         def tune_objective(**params):
@@ -55,14 +55,14 @@ if __name__ == "__main__":
 
     else:
         best_params = LstmAEHyperparameters(
-            epochs=700,
+            epochs=2,
             seq_dim=1,
-            batch_size=256,
+            batch_size=512,
 
-            num_layers=5,
+            num_layers=2,
             lr=0.001,
             latent_size=256,
-            grad_clipping=None
+            grad_clipping=2 ** 8
         )
 
     ae = best_params.create_ae()
@@ -72,9 +72,9 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
     train_losses, validate_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params)
+        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params, verbose=True)
 
-    utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
+    utils.draw_reconstruction_sample(ae, test_data, n_samples=2, title="Synthetic Data Set")
     utils.plot_metric(train_losses, validate_losses, "Loss")
 
     test_set = next(iter(test_loader)).to(DEVICE)

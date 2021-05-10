@@ -26,11 +26,13 @@ class Encoder(nn.Module):
                            hidden_size=encoding_dim,
                            num_layers=num_layers,
                            batch_first=True)
+        self.norm = nn.BatchNorm1d(num_features=103)
         init_weights(self.rnn)
         self.to(device)
 
     def forward(self, X):
         X_, (h_n, c_n) = self.rnn(X)
+        X_ = self.norm(X_)
 
         return X_, h_n[-1]
 
@@ -43,6 +45,7 @@ class Decoder(nn.Module):
                            hidden_size=hidden_dim,
                            num_layers=num_layers,
                            batch_first=True)
+        self.norm = nn.BatchNorm1d(num_features=103)
         self.output_layer = nn.Linear(hidden_dim, output_dim)
 
         init_weights(self.rnn)
@@ -51,6 +54,7 @@ class Decoder(nn.Module):
 
     def forward(self, encoded_X):
         decoded_X, hidden_state = self.rnn(encoded_X)
+        decoded_X = self.norm(decoded_X)
 
         return self.output_layer(decoded_X)
 
