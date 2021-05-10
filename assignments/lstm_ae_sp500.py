@@ -33,7 +33,7 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=hyperparameters.batch_size)
 
     train_losses, validate_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, hyperparameters)
+        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, hyperparameters, verbose=True)
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
     utils.plot_metric(train_losses, validate_losses, "Loss")
