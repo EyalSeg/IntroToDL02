@@ -2,8 +2,8 @@ import argparse
 import torch as T
 
 import pandas as pd
-import numpy as np
 
+from sklearn import preprocessing
 from torch.utils.data import Dataset
 
 default_name = "cache/sp500.csv"
@@ -11,13 +11,18 @@ time_format = '%d/%m/%Y'
 
 
 class SP500Dataset(Dataset):
-    def __init__(self, filename=default_name):
+    def __init__(self, filename=default_name, normalize=False):
         self.data = (pd.read_csv(filename, index_col=False, parse_dates=["date"]))
+
+        if normalize:
+            values = self.data['high'].values.astype(float).reshape(-1, 1)
+            self.data['high'] = preprocessing.MinMaxScaler().fit_transform(values)
 
         self.data = self.data.pivot(index="symbol", columns="date", values="high")
 
         self.data = self.data.fillna(method="ffill", axis=1)
         self.data = self.data.fillna(method="bfill", axis=1)
+
 
     def get_dates(self):
         return self.data.columns
@@ -37,7 +42,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
 
-    dataset = SP500Dataset()
+    dataset = SP500Dataset(normalize=True)
     dates = dataset.get_dates()
 
     fig, ax = plt.subplots()
