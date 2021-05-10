@@ -15,8 +15,8 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     criterion = lambda output, input: mse(output.output_sequence, input)
 
-    hyperparameters= utils.LstmAEHyperparameters(
-        epochs=300,
+    hyperparameters = utils.LstmAEHyperparameters(
+        epochs=5,
         seq_dim=1,
         batch_size=64,
 
@@ -35,5 +35,5 @@ if __name__ == "__main__":
     train_losses, validate_losses = \
         utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, hyperparameters, verbose=True)
 
-    utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
+    utils.draw_reconstruction_sample(ae, test_data, n_samples=2, type="text")
     utils.plot_metric(train_losses, validate_losses, "Loss")
