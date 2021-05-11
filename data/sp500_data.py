@@ -12,7 +12,7 @@ time_format = '%d/%m/%Y'
 class SP500Dataset(Dataset):
     def __init__(self, filename=default_name, sample_ratio=1, normalize=False):
         self.data = (pd.read_csv(filename, index_col=False, parse_dates=["date"]))
-        self.data = pd.DataFrame.head(self.data, n=int((len(self.data) * sample_ratio)))
+        self.data = T.utils.data.Subset(self.data, range(len(self.data) * sample_ratio))
 
         if normalize:
             values = self.data['high'].values.astype(float).reshape(-1, 1)
