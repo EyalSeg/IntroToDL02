@@ -207,7 +207,7 @@ def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparamete
     return loss
 
 
-def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="line"):
+def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="line", verbose=False):
     with T.no_grad():
         for _ in range(n_samples):
             idx = T.randint(len(data), (1,))
@@ -233,17 +233,17 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
                 labels = ["original", "reconstructed"]
                 grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
 
-            elif type == "text":
-                d = abs(s - o)
-                p = d / np.maximum(s, o)
-                ad = np.average(d)
-                ap = np.average(p)
-                print(f"Sample is: {s}\n, Output is: {o}\nDifferences are: {d}\n" + \
-                      f"Difference percentages are: {p}\nAverage Difference is: {ad}\nAverage Difference Percentages "
-                      f"is: {ap}\n")
-
             else:
                 raise Exception(f'type can be either "line" or "image", but was {type}.')
+
+            if verbose:
+                diff = abs(s - o)
+                p = diff / np.maximum(s, o)
+                ad = np.average(diff)
+                ap = np.average(p)
+                print(f"Sample is: {s}\n, Output is: {o}\nDifferences are: {diff}\n" + \
+                      f"Difference percentages are: {p}\nAverage Difference is: {ad}\nAverage Difference Percentages "
+                      f"is: {ap}\n")
 
             plt.title(title)
             plt.show()
