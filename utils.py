@@ -79,10 +79,17 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
 
 def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters, epoch_end_callbacks=(),
         supervised=False,
-        verbose=False):
+        verbose=False,
+        save_interval=float('inf')
+        ):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
+        if epoch % save_interval == 0:
+            for p in ae.parameters():
+                print(p.name, p.data)
+            T.save(ae.state_dict(), "../data/model/lstm_ae_toy")
+
         optimizer.zero_grad()
 
         epoch_losses, batch_sizes = [], []
@@ -131,7 +138,9 @@ def batch_loss(ae, batch, criterion, supervised=False):
 
 
 def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False,
-                      verbose=False):
+                      verbose=False,
+                      save_interval=float('inf')
+                      ):
     train_losses = []
     validate_losses = []
 
@@ -173,7 +182,8 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
         hyperparameters,
         epoch_end_callbacks=callbacks,
         supervised=supervised,
-        verbose=verbose
+        verbose=verbose,
+        save_interval=save_interval
         )
 
     if not supervised:
