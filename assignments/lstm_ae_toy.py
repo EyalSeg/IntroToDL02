@@ -67,15 +67,17 @@ if __name__ == "__main__":
 
     ae = best_params.create_ae()
 
+    load_model = False
+    if load_model:
+        ae.load_state_dict(T.load("../data/model/lstm_ae_toy"))
+
     train_dataloader = DataLoader(train_data, batch_size=best_params.batch_size, shuffle=True)
     validate_loader = DataLoader(valid_data, batch_size=len(valid_data))
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
     train_losses, validate_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params)
-
-    utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
-    utils.plot_metric(train_losses, validate_losses, "Loss")
+        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params,
+                                verbose=True, save_interval=50)
 
     test_set = next(iter(test_loader)).to(DEVICE)
 
@@ -84,4 +86,7 @@ if __name__ == "__main__":
         test_loss = criterion(output, test_set).item()
 
     print(f"Test loss: {test_loss}")
+
+    utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
+    utils.plot_metric(train_losses, validate_losses, "Loss")
 
