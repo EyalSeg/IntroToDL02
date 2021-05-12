@@ -72,7 +72,7 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
     train_losses, test_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params)
+        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params, verbose=True)
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
     utils.plot_metric(train_losses, test_losses, "Loss")

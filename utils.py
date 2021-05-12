@@ -79,7 +79,8 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
     return train_data, valid_data, test_data
 
 
-def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(), supervised=False):
+def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(),
+        supervised=False, verbose=False):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
@@ -99,6 +100,9 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
             batch_sizes.append(len(batch))
 
         epoch_loss = np.average(epoch_losses, weights=batch_sizes)
+
+        if verbose:
+            print(f"Epoch: {epoch} loss: {epoch_loss}")
 
         for callback in epoch_end_callbacks:
             callback(epoch, ae, epoch_loss)
@@ -127,7 +131,8 @@ def batch_loss(ae, batch, criterion, supervised=False):
         return criterion(output, X)
 
 
-def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False):
+def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
+                      verbose=False):
     train_losses = []
     test_losses = []
 
@@ -169,7 +174,8 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
         criterion,
         hyperparameters,
         epoch_end_callbacks=callbacks,
-        supervised=supervised)
+        supervised=supervised,
+        verbose=verbose)
 
     if not supervised:
         return train_losses, test_losses

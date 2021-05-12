@@ -74,7 +74,8 @@ if __name__ == "__main__":
         return reconstruction_loss + classification_loss
 
     train_losses, test_losses, train_accuracy, test_accuracy = \
-        utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=True)
+        utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=True,
+                                verbose=True)
 
     utils.plot_metric(train_losses, test_losses, "Loss")
     utils.plot_metric(train_accuracy, test_accuracy, "Accuracy")
