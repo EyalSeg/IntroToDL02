@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     else:
         best_params = LstmAEHyperparameters(
-            epochs=700,
+            epochs=200,
             seq_dim=1,
             batch_size=256,
 
@@ -71,17 +71,14 @@ if __name__ == "__main__":
     validate_loader = DataLoader(valid_data, batch_size=len(valid_data))
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
-    train_losses, validate_losses = \
+    train_losses, test_losses = \
         utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params)
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
-    utils.plot_metric(train_losses, validate_losses, "Loss")
+    utils.plot_metric(train_losses, test_losses, "Loss")
 
-    test_set = next(iter(test_loader)).to(DEVICE)
+    print(f"Test loss: {test_losses[-1]}")
 
-    with T.no_grad():
-        output = ae.forward(test_set)
-        test_loss = criterion(output, test_set).item()
 
-    print(f"Test loss: {test_loss}")
+
 

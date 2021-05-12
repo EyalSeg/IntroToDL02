@@ -17,14 +17,14 @@ if __name__ == "__main__":
     criterion = lambda output, input: mse(output.output_sequence, input)
 
     hyperparameters= utils.LstmAEHyperparameters(
-        epochs=300,
+        epochs=250,
         seq_dim=1,
         batch_size=32,
 
-        num_layers=2,
-        lr=0.001,
-        latent_size=256,
-        grad_clipping=None
+        num_layers=1,
+        lr=0.0005,
+        latent_size=64,
+        grad_clipping=1
     )
 
     ae = hyperparameters.create_ae()
@@ -33,9 +33,11 @@ if __name__ == "__main__":
     validate_loader = DataLoader(valid_data, batch_size=hyperparameters.batch_size)
     test_loader = DataLoader(test_data, batch_size=hyperparameters.batch_size)
 
-    train_losses, validate_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, hyperparameters)
+    train_losses, test_losses = \
+        utils.train_and_measure(ae, train_dataloader, test_loader, criterion, hyperparameters)
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
-    utils.plot_metric(train_losses, validate_losses, "Loss")
+    utils.plot_metric(train_losses, test_losses, "Loss")
+
+    print(f"Test loss: {test_losses[-1]}")
 

@@ -127,22 +127,22 @@ def batch_loss(ae, batch, criterion, supervised=False):
         return criterion(output, X)
 
 
-def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False):
+def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False):
     train_losses = []
-    validate_losses = []
+    test_losses = []
 
     store_train_loss = lambda epoch, ae, loss: train_losses.append(loss)
 
-    def store_validation_loss(epoch, ae, train_loss):
+    def store_test_loss(epoch, ae, train_loss):
         with T.no_grad():
-            loss = epoch_loss(ae, validate_dataloader, criterion, supervised=supervised)
+            loss = epoch_loss(ae, test_dataloader, criterion, supervised=supervised)
 
-        validate_losses.append(loss)
+        test_losses.append(loss)
 
-    callbacks = [store_train_loss, store_validation_loss]
+    callbacks = [store_train_loss, store_test_loss]
 
     train_accuracies = []
-    validate_accuracies = []
+    test_accuracies = []
     if supervised:
         def measure_accuracy(data_loader):
             n_correct = 0
@@ -163,7 +163,7 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
         callbacks.append(lambda epoch, ae, train_loss:
                          train_accuracies.append(measure_accuracy(train_dataloader)))
         callbacks.append(lambda epoch, ae, train_loss:
-                         validate_accuracies.append(measure_accuracy(validate_dataloader)))
+                         test_accuracies.append(measure_accuracy(test_dataloader)))
     fit(ae,
         train_dataloader,
         criterion,
@@ -172,9 +172,9 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
         supervised=supervised)
 
     if not supervised:
-        return train_losses, validate_losses
+        return train_losses, test_losses
 
-    return train_losses, validate_losses, train_accuracies, validate_accuracies
+    return train_losses, test_losses, train_accuracies, test_accuracies
 
 
 def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
@@ -246,9 +246,9 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
     plt.show()
 
 
-def plot_metric(train_values, validation_values, metric_name):
+def plot_metric(train_values, test_values, metric_name):
     df = pd.DataFrame.from_dict({"training set": train_values,
-                                 "validation set": validation_values})
+                                 "test set": test_values})
     df.index.name = "Epoch"
 
     sns.lineplot(data=df, dashes=False)
