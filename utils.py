@@ -84,10 +84,11 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
-        optimizer.zero_grad()
-
         epoch_losses, batch_sizes = [], []
+
         for batch in iter(train_dataloader):
+            optimizer.zero_grad()
+
             loss = batch_loss(ae, batch, criterion, supervised=supervised)
             loss.backward()
 
