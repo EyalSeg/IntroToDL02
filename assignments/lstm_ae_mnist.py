@@ -73,19 +73,16 @@ if __name__ == "__main__":
 
         return reconstruction_loss + classification_loss
 
-    train_losses, validate_losses, train_accuracy, validate_accuracy = \
-        utils.train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=True)
+    train_losses, test_losses, train_accuracy, test_accuracy = \
+        utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=True,
+                                verbose=True)
 
-    utils.plot_metric(train_losses, validate_losses, "Loss")
-    utils.plot_metric(train_accuracy, validate_accuracy, "Accuracy")
+    utils.plot_metric(train_losses, test_losses, "Loss")
+    utils.plot_metric(train_accuracy, test_accuracy, "Accuracy")
 
     test_images = [tensor for tensor, label in test_data]
-    # test_sequences_dataloader = DataLoader(test_sequences, batch_size=len(test_data), shuffle=True)
 
     utils.draw_reconstruction_sample(ae, test_images, n_samples=2, type="image")
     utils.draw_classification_sample(ae, test_data, n_samples=9, type="image")
 
-    with T.no_grad():
-        test_loss = utils.epoch_loss(ae, test_dataloader, criterion, supervised=True)
-
-    print(f"Test loss: {test_loss}")
+    print(f"Test loss: {test_losses[-1]}")

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import seaborn_image as isns
 
+from pytorch_metric_learning import losses, reducers
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union
@@ -32,7 +33,8 @@ class LstmAEHyperparameters:
         return LstmAutoEncoder(self.seq_dim, self.latent_size, self.num_layers)
 
 
-def load_torch_dataset(dataset, transform=None, train_validate_split=(2 / 3, 1 / 3), cache_path='/data/cache'):
+def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
+
     if transform:
         train_data = dataset(
             root=cache_path,
@@ -77,9 +79,8 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
     return train_data, valid_data, test_data
 
 
-def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters, epoch_end_callbacks=(),
-        supervised=False,
-        verbose=False):
+def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(),
+        supervised=False, verbose=False):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
@@ -101,7 +102,7 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
         epoch_loss = np.average(epoch_losses, weights=batch_sizes)
 
         if verbose:
-            print(f"Epoch: {epoch}, Epoch Loss (train): {epoch_loss}")
+            print(f"Epoch: {epoch} loss: {epoch_loss}")
 
         for callback in epoch_end_callbacks:
             callback(epoch, ae, epoch_loss)
@@ -130,29 +131,30 @@ def batch_loss(ae, batch, criterion, supervised=False):
         return criterion(output, X)
 
 
-def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hyperparameters, supervised=False,
+def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
                       verbose=False):
     train_losses = []
-    validate_losses = []
+    test_losses = []
 
     store_train_loss = lambda epoch, ae, loss: train_losses.append(loss)
 
-    def store_validation_loss(epoch, ae, train_loss):
+    def store_test_loss(epoch, ae, train_loss):
         with T.no_grad():
-            loss = epoch_loss(ae, validate_dataloader, criterion, supervised=supervised)
+            loss = epoch_loss(ae, test_dataloader, criterion, supervised=supervised)
 
-        validate_losses.append(loss)
+        test_losses.append(loss)
 
-    callbacks = [store_train_loss, store_validation_loss]
+    callbacks = [store_train_loss, store_test_loss]
 
     train_accuracies = []
-    validate_accuracies = []
+    test_accuracies = []
     if supervised:
         def measure_accuracy(data_loader):
             n_correct = 0
             total = 0
             with T.no_grad():
                 for batch in iter(data_loader):
+
                     X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
                     output = ae.forward(X)
@@ -166,24 +168,22 @@ def train_and_measure(ae, train_dataloader, validate_dataloader, criterion, hype
         callbacks.append(lambda epoch, ae, train_loss:
                          train_accuracies.append(measure_accuracy(train_dataloader)))
         callbacks.append(lambda epoch, ae, train_loss:
-                         validate_accuracies.append(measure_accuracy(validate_dataloader)))
+                         test_accuracies.append(measure_accuracy(test_dataloader)))
     fit(ae,
         train_dataloader,
         criterion,
         hyperparameters,
         epoch_end_callbacks=callbacks,
         supervised=supervised,
-        verbose=verbose
-        )
+        verbose=verbose)
 
     if not supervised:
-        return train_losses, validate_losses
+        return train_losses, test_losses
 
-    return train_losses, validate_losses, train_accuracies, validate_accuracies
+    return train_losses, test_losses, train_accuracies, test_accuracies
 
 
-def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters: LstmAEHyperparameters,
-                             supervised=False):
+def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
 
@@ -206,31 +206,18 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
 
             output = ae.forward(sample).output_sequence
 
-            s = np.array(sample.squeeze().tolist())
-            o = np.array(output.squeeze().tolist())
-
             if type == "line":
-                df = pd.DataFrame.from_dict({'actual': s,
-                                             'predicted': o})
-                df.index.name = "Time Step"
+                df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
+                                             'predicted': output.squeeze().tolist()})
+                df.index.name = "t"
 
                 sns.lineplot(data=df, dashes=False)
-                plt.title(title)
-                plt.ylabel("Data Value")
+                plt.ylabel("y")
 
             elif type == "image":
                 images = [sample_cpu, output.squeeze(0).cpu()]
                 labels = ["original", "reconstructed"]
                 grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
-
-            elif type == "text":
-                d = abs(s - o)
-                p = d / np.maximum(s, o)
-                ad = np.average(d)
-                ap = np.average(p)
-                print(f"Sample is: {s}\n, Output is: {o}\nDifferences are: {d}\n" + \
-                      f"Difference percentages are: {p}\nAverage Difference is: {ad}\nAverage Difference Percentages "
-                      f"is: {ap}\n")
 
             else:
                 raise Exception(f'type can be either "line" or "image", but was {type}.')
@@ -265,12 +252,13 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
     plt.show()
 
 
-def plot_metric(train_values, validation_values, metric_name):
+def plot_metric(train_values, test_values, metric_name):
     df = pd.DataFrame.from_dict({"training set": train_values,
-                                 "validation set": validation_values})
+                                 "test set": test_values})
     df.index.name = "Epoch"
 
     sns.lineplot(data=df, dashes=False)
     plt.title(f"Learn {metric_name}")
     plt.ylabel(metric_name)
     plt.show()
+
