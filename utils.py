@@ -129,12 +129,12 @@ def batch_loss(ae, batch, criterion, supervised=False):
         X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
         output = ae.forward(X)
-        return criterion(output, X, y)
+        return criterion(output, X, y, supervised=supervised)
     else:
         X = batch.to(DEVICE)
 
         output = ae.forward(X)
-        return criterion(output, X)
+        return criterion(output, X, supervised=supervised)
 
 
 def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
