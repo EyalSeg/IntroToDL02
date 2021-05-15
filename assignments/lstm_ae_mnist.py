@@ -52,13 +52,18 @@ if __name__ == "__main__":
         batch_size=64,
         n_classes=10,
 
-        num_layers=5,
+        num_layers=2,
         lr=0.001,
         latent_size=256,
         grad_clipping=None
     )
 
     ae = hyperparameters.create_ae()
+    model_name = "lstm_ae_mnist"
+
+    load_model = False
+    if load_model:
+        ae.load_state_dict(T.load(f"../data/model/{model_name}"))
 
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     validate_dataloader = DataLoader(validate_data, batch_size=hyperparameters.batch_size, shuffle=True)
@@ -74,8 +79,12 @@ if __name__ == "__main__":
         return reconstruction_loss + classification_loss
 
     train_losses, test_losses, train_accuracy, test_accuracy = \
-        utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=True,
-                                verbose=True)
+        utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters,
+                                supervised=True,
+                                verbose=True,
+                                save_interval=50,
+                                model_name=model_name
+                                )
 
     utils.plot_metric(train_losses, test_losses, "Loss")
     utils.plot_metric(train_accuracy, test_accuracy, "Accuracy")
