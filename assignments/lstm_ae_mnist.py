@@ -61,6 +61,7 @@ if __name__ == "__main__":
     ae = hyperparameters.create_ae()
     model_name = "lstm_ae_mnist"
 
+    supervised = True
     load_model = False
     if load_model:
         ae.load_state_dict(T.load(f"../data/model/{model_name}"))
@@ -72,15 +73,18 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     cel = nn.CrossEntropyLoss()
 
-    def criterion(output: AutoencoderClassifierOutput, input_sequence, labels):
+    def criterion(output: AutoencoderClassifierOutput, input_sequence, labels, supervised=False):
         reconstruction_loss = mse(output.output_sequence, input_sequence)
         classification_loss = cel(output.label_predictions, labels)
 
-        return reconstruction_loss + classification_loss
+        if supervised:
+            return classification_loss
+        else:
+            return reconstruction_loss
 
     train_losses, test_losses, train_accuracy, test_accuracy = \
         utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters,
-                                supervised=True,
+                                supervised=supervised,
                                 verbose=True,
                                 save_interval=50,
                                 model_name=model_name
