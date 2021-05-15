@@ -49,7 +49,7 @@ if __name__ == "__main__":
     hyperparameters = AEClassifierHyperparameters(
         epochs=250,
         seq_dim=28,
-        batch_size=64,
+        batch_size=256,
         n_classes=10,
 
         num_layers=2,
