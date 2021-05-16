@@ -66,13 +66,27 @@ if __name__ == "__main__":
         )
 
     ae = best_params.create_ae()
+    supervised = False
+    load_model = False
+    model_name = "lstm_ae_toy"
+
+    if load_model:
+        if supervised:
+            ae.load_state_dict(T.load(f"../data/model/{model_name}/supervised"))
+        else:
+            ae.load_state_dict(T.load(f"../data/model/{model_name}/un_supervised"))
 
     train_dataloader = DataLoader(train_data, batch_size=best_params.batch_size, shuffle=True)
     validate_loader = DataLoader(valid_data, batch_size=len(valid_data))
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
     train_losses, test_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params, verbose=True)
+        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params,
+                                verbose=True,
+                                supervised=supervised,
+                                save_interval=50,
+                                model_name=model_name
+                                )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
     utils.plot_metric(train_losses, test_losses, "Loss")

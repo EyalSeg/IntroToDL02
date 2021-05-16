@@ -64,7 +64,10 @@ if __name__ == "__main__":
     supervised = True
     load_model = False
     if load_model:
-        ae.load_state_dict(T.load(f"../data/model/{model_name}"))
+        if supervised:
+            ae.load_state_dict(T.load(f"../data/model/{model_name}/supervised"))
+        else:
+            ae.load_state_dict(T.load(f"../data/model/{model_name}/un_supervised"))
 
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     validate_dataloader = DataLoader(validate_data, batch_size=hyperparameters.batch_size, shuffle=True)

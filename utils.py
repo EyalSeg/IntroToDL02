@@ -87,7 +87,11 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
         if epoch % save_interval == 0:
             for p in ae.parameters():
                 print(p.name, p.data)
-            T.save(ae.state_dict(), f"../data/model/{model_name}")
+
+            if supervised:
+                T.save(ae.state_dict(), f"../data/model/{model_name}/supervised")
+            else:
+                T.save(ae.state_dict(), f"../data/model/{model_name}/un_supervised")
 
         epoch_losses, batch_sizes = [], []
 

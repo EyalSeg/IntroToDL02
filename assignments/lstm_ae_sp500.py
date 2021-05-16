@@ -19,7 +19,7 @@ if __name__ == "__main__":
     hyperparameters= utils.LstmAEHyperparameters(
         epochs=250,
         seq_dim=1,
-        batch_size=32,
+        batch_size=256,
 
         num_layers=1,
         lr=0.0005,
@@ -29,12 +29,27 @@ if __name__ == "__main__":
 
     ae = hyperparameters.create_ae()
 
+    supervised = False
+    load_model = False
+    model_name = "lstm_ae_sp500"
+
+    if load_model:
+        if supervised:
+            ae.load_state_dict(T.load(f"../data/model/{model_name}/supervised"))
+        else:
+            ae.load_state_dict(T.load(f"../data/model/{model_name}/un_supervised"))
+
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     validate_loader = DataLoader(valid_data, batch_size=hyperparameters.batch_size)
     test_loader = DataLoader(test_data, batch_size=hyperparameters.batch_size)
 
     train_losses, test_losses = \
-        utils.train_and_measure(ae, train_dataloader, test_loader, criterion, hyperparameters, verbose=True)
+        utils.train_and_measure(ae, train_dataloader, test_loader, criterion, hyperparameters,
+                                verbose=True,
+                                supervised=supervised,
+                                save_interval=50,
+                                model_name=model_name
+                                )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
     utils.plot_metric(train_losses, test_losses, "Loss")
