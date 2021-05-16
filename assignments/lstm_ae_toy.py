@@ -24,7 +24,7 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
 
     supervised = False
-    regression = False
+    regression = True
 
     criterion = lambda output, input: mse(output.output_sequence, input)
 
