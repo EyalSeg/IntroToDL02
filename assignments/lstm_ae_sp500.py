@@ -34,6 +34,7 @@ if __name__ == "__main__":
     ae = hyperparameters.create_ae()
 
     supervised = False
+    regression = True
     load_model = False
     model_name = "lstm_ae_sp500"
 
@@ -52,7 +53,8 @@ if __name__ == "__main__":
                                 verbose=True,
                                 supervised=supervised,
                                 save_interval=50,
-                                model_name=model_name
+                                model_name=model_name,
+                                regression=True
                                 )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)

@@ -1,8 +1,6 @@
 import torch as T
 import torch.nn as nn
-import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
 
 from torch.utils.data import DataLoader
 
@@ -18,16 +16,19 @@ file = "../data/cache/synthetic.csv"
 DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 T.set_default_dtype(T.double)
 
-
 if __name__ == "__main__":
     dataset = SyntheticDataset(file)
 
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
 
     mse = nn.MSELoss()
-    criterion = lambda output, input: mse(output.output_sequence, input)
 
-    should_tune = False # change to false to use predefined hyperparameters
+
+    def criterion(output, input, supervised=False):
+        return mse(output.output_sequence, input)
+
+
+    should_tune = False  # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
             'epochs': [700],
@@ -40,9 +41,11 @@ if __name__ == "__main__":
             'grad_clipping': [None, 1],
         }
 
+
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
+
 
         best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
         best_params = LstmAEHyperparameters(**best_params)
@@ -67,6 +70,7 @@ if __name__ == "__main__":
 
     ae = best_params.create_ae()
     supervised = False
+    regression = True
     load_model = False
     model_name = "lstm_ae_toy"
 
@@ -85,14 +89,11 @@ if __name__ == "__main__":
                                 verbose=True,
                                 supervised=supervised,
                                 save_interval=50,
-                                model_name=model_name
+                                model_name=model_name,
+                                regression=True
                                 )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
     utils.plot_metric(train_losses, test_losses, "Loss")
 
     print(f"Test loss: {test_losses[-1]}")
-
-
-
-
