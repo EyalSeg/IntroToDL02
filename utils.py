@@ -32,8 +32,7 @@ class LstmAEHyperparameters:
         return LstmAutoEncoder(self.seq_dim, self.latent_size, self.num_layers)
 
 
-def load_torch_dataset(dataset, transform=None, train_validate_split=(2/3, 1/3), cache_path='/data/cache'):
-
+def load_torch_dataset(dataset, transform=None, train_validate_split=(2 / 3, 1 / 3), cache_path='/data/cache'):
     if transform:
         train_data = dataset(
             root=cache_path,
@@ -78,20 +77,14 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
     return train_data, valid_data, test_data
 
 
-def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(),
+def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters, epoch_end_callbacks=(),
         supervised=False, verbose=False, save_interval=None, model_name=None,
         regression=False):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
         if save_interval is not None and epoch % save_interval == 0:
-            for p in ae.parameters():
-                print(p.name, p.data)
-
-            if supervised:
-                T.save(ae.state_dict(), f"../data/model/{model_name}/supervised")
-            else:
-                T.save(ae.state_dict(), f"../data/model/{model_name}/un_supervised")
+            save_model(ae, model_name, supervised=supervised)
 
         epoch_losses, batch_sizes = [], []
 
@@ -121,13 +114,7 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
         if verbose:
             print(f"Epoch: {epoch} loss: {epoch_loss}")
 
-            if supervised:
-                f = open(f"../data/results/{model_name}/supervised.txt", "a")
-            else:
-                f = open(f"../data/results/{model_name}/un_supervised.txt", "a")
-
-            f.write(f"Epoch: {epoch} loss: {epoch_loss}\n")
-            f.close()
+            save_verbose_prints(epoch, epoch_loss, model_name, supervised=supervised)
 
         for callback in epoch_end_callbacks:
             callback(epoch, ae, epoch_loss)
@@ -156,17 +143,38 @@ def batch_loss(ae, batch, criterion, batch_next=None, supervised=False, regressi
         X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
         output = ae.forward(X)
-        return criterion(output, X, y, supervised=supervised)
+        return criterion(output, X, y)
     elif regression:
         X, X_next = batch.to(DEVICE), batch_next.to(DEVICE)
 
         output = ae.forward(X)
-        return criterion(output, X_next, supervised=supervised)
+        # return criterion(output, X, supervised=supervised)
+        return criterion(output, X_next)
     else:
         X = batch.to(DEVICE)
 
         output = ae.forward(X)
-        return criterion(output, X, supervised=supervised)
+        return criterion(output, X)
+
+
+def save_model(ae, model_name, supervised=False):
+    for p in ae.parameters():
+        print(p.name, p.data)
+
+    if supervised:
+        T.save(ae.state_dict(), f"../data/model/{model_name}/supervised")
+    else:
+        T.save(ae.state_dict(), f"../data/model/{model_name}/un_supervised")
+
+
+def save_verbose_prints(epoch, epoch_loss, model_name, supervised=False):
+    if supervised:
+        f = open(f"../data/results/{model_name}/supervised.txt", "a")
+    else:
+        f = open(f"../data/results/{model_name}/un_supervised.txt", "a")
+
+    f.write(f"Epoch: {epoch} loss: {epoch_loss}\n")
+    f.close()
 
 
 def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
@@ -193,7 +201,6 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
             total = 0
             with T.no_grad():
                 for batch in iter(data_loader):
-
                     X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
                     output = ae.forward(X)
@@ -226,7 +233,7 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
     return train_losses, test_losses, train_accuracies, test_accuracies
 
 
-def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters,
+def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters: LstmAEHyperparameters,
                              supervised=False, regression=False, verbose=False):
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
@@ -308,4 +315,3 @@ def plot_metric(train_values, test_values, metric_name):
     plt.title(f"Learn {metric_name}")
     plt.ylabel(metric_name)
     plt.show()
-
