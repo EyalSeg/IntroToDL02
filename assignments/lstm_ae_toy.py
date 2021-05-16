@@ -24,13 +24,13 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
 
     supervised = False
-    regression = False
+    regression = True
 
     def criterion(output, input, supervised=False):
         return mse(output.output_sequence, input)
 
 
-    should_tune = True  # change to false to use predefined hyperparameters
+    should_tune = False  # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
             'epochs': [250],
@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     else:
         best_params = LstmAEHyperparameters(
-            epochs=200,
+            epochs=100,
             seq_dim=1,
             batch_size=256,
 
