@@ -4,6 +4,9 @@ import torch as T
 import pandas as pd
 import numpy as np
 
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 from torch.utils.data import Dataset
 
 default_name = "cache/synthetic.csv"
@@ -37,4 +40,17 @@ if __name__ == "__main__":
 
     df.to_csv(args.destination, index=False)
 
+    fig, ax = plt.subplots()
 
+    # put the labels at 45deg since they tend to be too long
+    fig.autofmt_xdate()
+
+    locations = [0, 1, 2]
+    for loc in locations:
+        signals = df.iloc[loc]
+
+        sns.lineplot(x=range(len(signals)), y=signals)
+        plt.title(f"Signals data {loc}")
+        plt.ylabel("Value")
+        plt.xlabel("Time Step")
+        plt.show()
