@@ -54,7 +54,7 @@ if __name__ == "__main__":
                                 supervised=supervised,
                                 save_interval=50,
                                 model_name=model_name,
-                                regression=True
+                                regression=regression
                                 )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)

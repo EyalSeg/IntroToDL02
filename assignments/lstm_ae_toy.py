@@ -23,6 +23,8 @@ if __name__ == "__main__":
 
     mse = nn.MSELoss()
 
+    supervised = False
+    regression = False
 
     def criterion(output, input, supervised=False):
         return mse(output.output_sequence, input)
@@ -41,10 +43,10 @@ if __name__ == "__main__":
             'grad_clipping': [None, 1],
         }
 
-
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
-            return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
+            return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters,
+                                                  regression=regression, supervised=supervised)
 
 
         best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
@@ -69,8 +71,6 @@ if __name__ == "__main__":
         )
 
     ae = best_params.create_ae()
-    supervised = False
-    regression = True
     load_model = False
     model_name = "lstm_ae_toy"
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
                                 supervised=supervised,
                                 save_interval=50,
                                 model_name=model_name,
-                                regression=True
+                                regression=regression
                                 )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
