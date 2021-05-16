@@ -16,7 +16,7 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
 
 
-    def criterion(output, input, supervised=False):
+    def criterion(output, input):
         return mse(output.output_sequence, input)
 
 

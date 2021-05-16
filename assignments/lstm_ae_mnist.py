@@ -54,16 +54,18 @@ if __name__ == "__main__":
         grad_clipping=None
     )
 
-    ae = hyperparameters.create_ae()
-    model_name = "lstm_ae_mnist"
+    settings = {
+        "model_name": "lstm_ae_mnist",
+        "supervised": False
+    }
 
-    supervised = True
+    ae = hyperparameters.create_ae()
     load_model = False
     if load_model:
-        if supervised:
-            ae.load_state_dict(T.load(f"../data/model/{model_name}/supervised"))
+        if settings['supervised']:
+            ae.load_state_dict(T.load(f"../data/model/{settings['model_name']}/supervised"))
         else:
-            ae.load_state_dict(T.load(f"../data/model/{model_name}/un_supervised"))
+            ae.load_state_dict(T.load(f"../data/model/{settings['model_name']}/un_supervised"))
 
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     validate_dataloader = DataLoader(validate_data, batch_size=hyperparameters.batch_size, shuffle=True)
@@ -72,21 +74,23 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     cel = nn.CrossEntropyLoss()
 
-    def criterion(output: AutoencoderClassifierOutput, input_sequence, labels, supervised=False):
-        reconstruction_loss = mse(output.output_sequence, input_sequence)
-        classification_loss = cel(output.label_predictions, labels)
+    if settings["supervised"]:
+        def criterion(output: AutoencoderClassifierOutput, input_sequence, labels):
+            classification_loss = cel(output.label_predictions, labels)
 
-        if supervised:
             return classification_loss
-        else:
+    else:
+        def criterion(output: AutoencoderClassifierOutput, input_sequence, labels):
+            reconstruction_loss = mse(output.output_sequence, input_sequence)
+
             return reconstruction_loss
 
     train_losses, test_losses, train_accuracy, test_accuracy = \
         utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters,
-                                supervised=supervised,
+                                supervised=settings['supervised'],
                                 verbose=True,
                                 save_interval=50,
-                                model_name=model_name
+                                model_name=settings['model_name']
                                 )
 
     utils.plot_metric(train_losses, test_losses, "Loss")

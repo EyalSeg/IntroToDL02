@@ -26,9 +26,7 @@ if __name__ == "__main__":
     supervised = False
     regression = True
 
-    def criterion(output, input, supervised=False):
-        return mse(output.output_sequence, input)
-
+    criterion = lambda output, input: mse(output.output_sequence, input)
 
     should_tune = False  # change to false to use predefined hyperparameters
     if should_tune:
@@ -42,6 +40,7 @@ if __name__ == "__main__":
             # 'grad_clipping': [None, 0.01, 0.1, 0.5, 1, 2],
             'grad_clipping': [None, 1],
         }
+
 
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
