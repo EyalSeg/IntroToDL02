@@ -159,7 +159,7 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
 
     def store_test_loss(epoch, ae, train_loss):
         with T.no_grad():
-            loss = epoch_loss(ae, test_dataloader, criterion, supervised=supervised)
+            loss = epoch_loss(ae, test_dataloader, criterion, supervised=supervised, regression=regression)
 
         test_losses.append(loss)
 
@@ -206,7 +206,8 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
     return train_losses, test_losses, train_accuracies, test_accuracies
 
 
-def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
+def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters,
+                             supervised=False, regression=False):
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
 
@@ -215,7 +216,7 @@ def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparamete
     validate_loader = DataLoader(validate_data, batch_size=len(validate_data))
 
     with T.no_grad():
-        loss = epoch_loss(ae, validate_loader, criterion, supervised=supervised)
+        loss = epoch_loss(ae, validate_loader, criterion, supervised=supervised, regression=regression)
 
     return loss
 
