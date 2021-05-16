@@ -14,9 +14,13 @@ if __name__ == "__main__":
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
 
     mse = nn.MSELoss()
-    criterion = lambda output, input: mse(output.output_sequence, input)
 
-    hyperparameters= utils.LstmAEHyperparameters(
+
+    def criterion(output, input, supervised=False):
+        return mse(output.output_sequence, input)
+
+
+    hyperparameters = utils.LstmAEHyperparameters(
         epochs=250,
         seq_dim=1,
         batch_size=256,
@@ -55,4 +59,3 @@ if __name__ == "__main__":
     utils.plot_metric(train_losses, test_losses, "Loss")
 
     print(f"Test loss: {test_losses[-1]}")
-
