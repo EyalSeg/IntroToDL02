@@ -79,12 +79,12 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
 
 
 def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(),
-        supervised=False, verbose=False, save_interval=float('inf'), model_name=None,
+        supervised=False, verbose=False, save_interval=None, model_name=None,
         regression=False):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
-        if epoch % save_interval == 0:
+        if save_interval is not None and epoch % save_interval == 0:
             for p in ae.parameters():
                 print(p.name, p.data)
 
@@ -207,11 +207,14 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
 
 
 def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters,
-                             supervised=False, regression=False):
+                             supervised=False, regression=False, verbose=False):
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
 
-    fit(ae, train_dataloader, criterion, hyperparameters, supervised=supervised)
+    if verbose:
+        print(f"Tuning Hyper-parameters: {hyperparameters}\n")
+
+    fit(ae, train_dataloader, criterion, hyperparameters, supervised=supervised, verbose=verbose)
 
     validate_loader = DataLoader(validate_data, batch_size=len(validate_data))
 
