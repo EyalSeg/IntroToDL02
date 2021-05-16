@@ -88,27 +88,15 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
 
         epoch_losses, batch_sizes = [], []
 
-        batch_previous = None
         for batch in iter(train_dataloader):
-            if regression and batch_previous is None:
-                batch_previous = batch
 
             optimizer.zero_grad()
 
-            if regression:
-                loss = batch_loss(ae=ae,
-                                  batch=batch_previous,
-                                  criterion=criterion,
-                                  batch_next=batch,
-                                  supervised=supervised,
-                                  regression=regression)
-            else:
-                loss = batch_loss(ae=ae,
-                                  batch=batch,
-                                  criterion=criterion,
-                                  batch_next=None,
-                                  supervised=supervised,
-                                  regression=regression)
+            loss = batch_loss(ae=ae,
+                              batch=batch,
+                              criterion=criterion,
+                              supervised=supervised)
+
             loss.backward()
 
             if hyperparameters.grad_clipping is not None:
@@ -118,9 +106,6 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
 
             epoch_losses.append(loss.item())
             batch_sizes.append(len(batch))
-
-            if regression:
-                batch_previous = batch
 
         epoch_loss = np.average(epoch_losses, weights=batch_sizes)
 
@@ -133,36 +118,22 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
             callback(epoch, ae, epoch_loss)
 
 
-def epoch_loss(ae, dataloder, criterion, supervised=False, regression=False):
+def epoch_loss(ae, dataloder, criterion, supervised=False):
     losses, batch_sizes = [], []
 
-    batch_previous = None
     for batch in iter(dataloder):
-        if batch_previous is None:
-            batch_previous = batch
-
-        losses.append(batch_loss(ae, batch_previous, criterion,
-                                 batch_next=batch,
-                                 supervised=supervised, regression=regression).item())
+        losses.append(batch_loss(ae, batch, criterion, supervised=supervised).item())
         batch_sizes.append(len(batch))
-
-        batch_previous = batch
 
     return np.average(losses, weights=batch_sizes)
 
 
-def batch_loss(ae, batch, criterion, batch_next=None, supervised=False, regression=False):
+def batch_loss(ae, batch, criterion, supervised=False):
     if supervised:
         X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
         output = ae.forward(X)
         return criterion(output, X, y)
-    elif regression:
-        X, X_next = batch.to(DEVICE), batch_next.to(DEVICE)
-
-        output = ae.forward(X)
-        # return criterion(output, X, supervised=supervised)
-        return criterion(output, X_next)
     else:
         X = batch.to(DEVICE)
 
@@ -191,7 +162,7 @@ def save_verbose_prints(epoch, epoch_loss, model_name, supervised=False):
 
 
 def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
-                      verbose=False, save_interval=None, model_name=None, regression=False
+                      verbose=False, save_interval=None, model_name=None
                       ):
     train_losses = []
     test_losses = []
@@ -200,7 +171,7 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
 
     def store_test_loss(epoch, ae, train_loss):
         with T.no_grad():
-            loss = epoch_loss(ae, test_dataloader, criterion, supervised=supervised, regression=regression)
+            loss = epoch_loss(ae, test_dataloader, criterion, supervised=supervised)
 
         test_losses.append(loss)
 
@@ -247,7 +218,7 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
 
 
 def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters: LstmAEHyperparameters,
-                             supervised=False, regression=False, verbose=False):
+                             supervised=False, verbose=False):
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
 
@@ -259,7 +230,7 @@ def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparamete
     validate_loader = DataLoader(validate_data, batch_size=len(validate_data))
 
     with T.no_grad():
-        loss = epoch_loss(ae, validate_loader, criterion, supervised=supervised, regression=regression)
+        loss = epoch_loss(ae, validate_loader, criterion, supervised=supervised)
 
     return loss
 
