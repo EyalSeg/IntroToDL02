@@ -23,6 +23,23 @@ class SyntheticDataset(Dataset):
         return T.tensor(self.data.loc[index].values).unsqueeze(-1)
 
 
+def plot_signals(df):
+    fig, ax = plt.subplots()
+
+    # put the labels at 45deg since they tend to be too long
+    fig.autofmt_xdate()
+
+    locations = [0, 1, 2]
+    for loc in locations:
+        signals = df.iloc[loc]
+
+        sns.lineplot(x=range(len(signals)), y=signals)
+        plt.title(f"Signals data {loc}")
+        plt.ylabel("Value")
+        plt.xlabel("Time Step")
+        plt.show()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--timesteps", "-t", dest='timesteps', type=int, default=50)
@@ -40,17 +57,7 @@ if __name__ == "__main__":
 
     df.to_csv(args.destination, index=False)
 
-    fig, ax = plt.subplots()
+    signals_plot = False
 
-    # put the labels at 45deg since they tend to be too long
-    fig.autofmt_xdate()
-
-    locations = [0, 1, 2]
-    for loc in locations:
-        signals = df.iloc[loc]
-
-        sns.lineplot(x=range(len(signals)), y=signals)
-        plt.title(f"Signals data {loc}")
-        plt.ylabel("Value")
-        plt.xlabel("Time Step")
-        plt.show()
+    if signals_plot:
+        plot_signals(df)
