@@ -30,10 +30,10 @@ if __name__ == "__main__":
         return mse(output.output_sequence, input)
 
 
-    should_tune = False  # change to false to use predefined hyperparameters
+    should_tune = True  # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
-            'epochs': [700],
+            'epochs': [250],
             'seq_dim': [1],
             'batch_size': [128],
             'num_layers': [2],
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters,
-                                                  regression=regression, supervised=supervised)
+                                                  regression=regression, supervised=supervised, verbose=True)
 
 
         best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
