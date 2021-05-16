@@ -53,8 +53,7 @@ if __name__ == "__main__":
                                 verbose=True,
                                 supervised=supervised,
                                 save_interval=50,
-                                model_name=model_name,
-                                regression=regression
+                                model_name=model_name
                                 )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)

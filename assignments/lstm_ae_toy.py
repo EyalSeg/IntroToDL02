@@ -23,10 +23,12 @@ if __name__ == "__main__":
 
     mse = nn.MSELoss()
 
-    supervised = False
     regression = True
 
-    criterion = lambda output, input: mse(output.output_sequence, input)
+    if regression:
+        criterion = lambda output, input: mse(output.output_sequence[:-1], input[1:])
+    else:
+        criterion = lambda output, input: mse(output.output_sequence, input)
 
     should_tune = False  # change to false to use predefined hyperparameters
     if should_tune:
@@ -45,7 +47,7 @@ if __name__ == "__main__":
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters,
-                                                  regression=regression, supervised=supervised, verbose=True)
+                                                  verbose=True)
 
 
         best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
@@ -74,10 +76,10 @@ if __name__ == "__main__":
     model_name = "lstm_ae_toy"
 
     if load_model:
-        if supervised:
-            ae.load_state_dict(T.load(f"../data/model/{model_name}/supervised"))
+        if regression:
+            ae.load_state_dict(T.load(f"../data/model/{model_name}/regression"))
         else:
-            ae.load_state_dict(T.load(f"../data/model/{model_name}/un_supervised"))
+            ae.load_state_dict(T.load(f"../data/model/{model_name}/reconstruction"))
 
     train_dataloader = DataLoader(train_data, batch_size=best_params.batch_size, shuffle=True)
     validate_loader = DataLoader(valid_data, batch_size=len(valid_data))
@@ -86,10 +88,8 @@ if __name__ == "__main__":
     train_losses, test_losses = \
         utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params,
                                 verbose=True,
-                                supervised=supervised,
                                 save_interval=50,
-                                model_name=model_name,
-                                regression=regression
+                                model_name=model_name
                                 )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
