@@ -2,8 +2,6 @@ import itertools
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import numpy as np
-import marshal
-import types
 
 
 def tune(func, params_dict, direction="minimize", workers=1):
