@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import seaborn_image as isns
 
-from pytorch_metric_learning import losses, reducers
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union
@@ -80,7 +79,8 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
 
 
 def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(),
-        supervised=False, verbose=False, save_interval=float('inf'), model_name=None):
+        supervised=False, verbose=False, save_interval=float('inf'), model_name=None,
+        regression=False):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
@@ -98,7 +98,7 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
         for batch in iter(train_dataloader):
             optimizer.zero_grad()
 
-            loss = batch_loss(ae, batch, criterion, supervised=supervised)
+            loss = batch_loss(ae, batch, criterion, supervised=supervised, regression=regression)
             loss.backward()
 
             if hyperparameters.grad_clipping is not None:
@@ -114,22 +114,30 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
         if verbose:
             print(f"Epoch: {epoch} loss: {epoch_loss}")
 
+            if supervised:
+                f = open(f"../data/results/{model_name}/supervised.txt", "a")
+            else:
+                f = open(f"../data/results/{model_name}/un_supervised.txt", "a")
+
+            f.write(f"Epoch: {epoch} loss: {epoch_loss}\n")
+            f.close()
+
         for callback in epoch_end_callbacks:
             callback(epoch, ae, epoch_loss)
 
 
-def epoch_loss(ae, dataloder, criterion, supervised=False):
+def epoch_loss(ae, dataloder, criterion, supervised=False, regression=False):
     losses, batch_sizes = [], []
 
     for batch in iter(dataloder):
-        losses.append(batch_loss(ae, batch, criterion, supervised=supervised).item())
+        losses.append(batch_loss(ae, batch, criterion, supervised=supervised, regression=regression).item())
         batch_sizes.append(len(batch))
 
     return np.average(losses, weights=batch_sizes)
 
 
-def batch_loss(ae, batch, criterion, supervised=False):
-    if supervised:
+def batch_loss(ae, batch, criterion, supervised=False, regression=False):
+    if supervised and not regression:
         X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
         output = ae.forward(X)
@@ -142,7 +150,7 @@ def batch_loss(ae, batch, criterion, supervised=False):
 
 
 def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
-                      verbose=False, save_interval=None, model_name=None
+                      verbose=False, save_interval=None, model_name=None, regression=False
                       ):
     train_losses = []
     test_losses = []
@@ -188,7 +196,8 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
         supervised=supervised,
         verbose=verbose,
         save_interval=save_interval,
-        model_name=model_name
+        model_name=model_name,
+        regression=regression
         )
 
     if not supervised:
