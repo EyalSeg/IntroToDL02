@@ -90,13 +90,25 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
 
         batch_previous = None
         for batch in iter(train_dataloader):
-            if batch_previous is None:
+            if regression and batch_previous is None:
                 batch_previous = batch
 
             optimizer.zero_grad()
 
-            loss = batch_loss(ae, batch_previous, criterion, batch_next=batch,
-                              supervised=supervised, regression=regression)
+            if regression:
+                loss = batch_loss(ae=ae,
+                                  batch=batch_previous,
+                                  criterion=criterion,
+                                  batch_next=batch,
+                                  supervised=supervised,
+                                  regression=regression)
+            else:
+                loss = batch_loss(ae=ae,
+                                  batch=batch,
+                                  criterion=criterion,
+                                  batch_next=None,
+                                  supervised=supervised,
+                                  regression=regression)
             loss.backward()
 
             if hyperparameters.grad_clipping is not None:
@@ -107,7 +119,8 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
             epoch_losses.append(loss.item())
             batch_sizes.append(len(batch))
 
-            batch_previous = batch
+            if regression:
+                batch_previous = batch
 
         epoch_loss = np.average(epoch_losses, weights=batch_sizes)
 
