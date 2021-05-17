@@ -81,6 +81,7 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
 
 def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(),
         supervised=False, verbose=False):
+    criterion = criterion if isinstance(criterion, dict) else {"loss":criterion}
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
@@ -89,7 +90,8 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
         for batch in iter(train_dataloader):
             optimizer.zero_grad()
 
-            loss = batch_loss(ae, batch, criterion, supervised=supervised)
+            losses = batch_losses(ae, batch, criterion, supervised=supervised)
+            loss = sum(losses.values())
             loss.backward()
 
             if hyperparameters.grad_clipping is not None:
@@ -97,10 +99,11 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
 
             optimizer.step()
 
-            epoch_losses.append(loss.item())
+            epoch_losses.append(losses)
             batch_sizes.append(len(batch))
 
-        epoch_loss = np.average(epoch_losses, weights=batch_sizes)
+        epoch_loss = {name: [loss_dict[name].item() for loss_dict in epoch_losses] for name in criterion.keys()}
+        epoch_loss = {name: np.average(loss_list, weights=batch_sizes) for name, loss_list in epoch_loss.items()}
 
         if verbose:
             print(f"Epoch: {epoch} loss: {epoch_loss}")
@@ -109,10 +112,10 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
             callback(epoch, ae, epoch_loss)
 
 
-def epoch_loss(ae, dataloder, criterion, supervised=False):
+def epoch_loss(ae, dataloader, criterion, supervised=False):
     losses, batch_sizes = [], []
 
-    for batch in iter(dataloder):
+    for batch in iter(dataloader):
         losses.append(batch_loss(ae, batch, criterion, supervised=supervised).item())
         batch_sizes.append(len(batch))
 
@@ -132,56 +135,22 @@ def batch_loss(ae, batch, criterion, supervised=False):
         return criterion(output, X)
 
 
-def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
-                      verbose=False):
-    train_losses = []
-    test_losses = []
+def batch_losses(ae, batch, criterion_dict, supervised=False):
+    return {name: batch_loss(ae, batch, criterion, supervised=supervised)
+            for name, criterion in criterion_dict.items()}
 
-    store_train_loss = lambda epoch, ae, loss: train_losses.append(loss)
 
-    def store_test_loss(epoch, ae, train_loss):
-        with T.no_grad():
-            loss = epoch_loss(ae, test_dataloader, criterion, supervised=supervised)
+def epoch_losses(ae, dataloader, criterion_dict, supervised=False):
+    loss_dicts, batch_sizes = [], []
 
-        test_losses.append(loss)
+    for batch in iter(dataloader):
+        loss_dicts.append(batch_losses(ae, batch, criterion_dict, supervised=supervised))
+        batch_sizes.append(len(batch))
 
-    callbacks = [store_train_loss, store_test_loss]
+    losses = {name: [loss_dict[name].item() for loss_dict in loss_dicts] for name in criterion_dict.keys()}
+    losses = {name: np.average(loss_list, weights=batch_sizes) for name, loss_list in losses.items()}
 
-    train_accuracies = []
-    test_accuracies = []
-    if supervised:
-        def measure_accuracy(data_loader):
-            n_correct = 0
-            total = 0
-            with T.no_grad():
-                for batch in iter(data_loader):
-
-                    X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
-
-                    output = ae.forward(X)
-                    predictions = T.argmax(output.label_predictions, -1)
-
-                    n_correct += predictions.eq(y).sum().item()
-                    total += len(batch[0])
-
-            return n_correct / total
-
-        callbacks.append(lambda epoch, ae, train_loss:
-                         train_accuracies.append(measure_accuracy(train_dataloader)))
-        callbacks.append(lambda epoch, ae, train_loss:
-                         test_accuracies.append(measure_accuracy(test_dataloader)))
-    fit(ae,
-        train_dataloader,
-        criterion,
-        hyperparameters,
-        epoch_end_callbacks=callbacks,
-        supervised=supervised,
-        verbose=verbose)
-
-    if not supervised:
-        return train_losses, test_losses
-
-    return train_losses, test_losses, train_accuracies, test_accuracies
+    return losses
 
 
 def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
@@ -210,7 +179,7 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
             if type == "line":
                 df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
                                              'predicted': output.squeeze().tolist()})
-                df.index.name = "t"
+                df.index.name = "Timestep"
 
                 sns.lineplot(data=df, dashes=False)
                 plt.ylabel("y")
@@ -251,6 +220,26 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
 
     plt.title(title)
     plt.show()
+
+
+def draw_prediction_sample(ae, data, n_samples=1, title="example"):
+    samples = T.utils.data.Subset(data, list(range(0, n_samples)))
+    loader = DataLoader(samples, batch_size=n_samples)
+    X = next(iter(loader))
+
+    with T.no_grad():
+        prediction = ae.forward(X.to(DEVICE)).predicted_value
+
+    for actual, pred in zip(X, prediction):
+        actual, pred = actual.squeeze(-1), pred.squeeze(-1)
+        df = pd.DataFrame({'actual': actual[1:].cpu(),
+                           'predicted': pred[:-1].cpu()})
+
+        df.index.name = "Timestep"
+        sns.lineplot(data=df, dashes=False)
+        plt.ylabel("y")
+        plt.title(title)
+        plt.show()
 
 
 def plot_metric(train_values, test_values, metric_name):
