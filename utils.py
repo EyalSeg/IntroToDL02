@@ -153,63 +153,6 @@ def epoch_losses(ae, dataloader, criterion_dict, supervised=False):
     return losses
 
 
-def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
-                      verbose=False):
-    import warnings
-    warnings.warn("train_and_measure is deprecated. Use Experiment instead")
-
-    train_losses = []
-    test_losses = []
-
-    store_train_loss = lambda epoch, ae, loss: train_losses.append(loss)
-
-    def store_test_loss(epoch, ae, train_loss):
-        with T.no_grad():
-            loss = epoch_loss(ae, test_dataloader, criterion, supervised=supervised)
-
-        test_losses.append(loss)
-
-    callbacks = [store_train_loss, store_test_loss]
-
-    train_accuracies = []
-    test_accuracies = []
-    if supervised:
-        def measure_accuracy(data_loader):
-            n_correct = 0
-            total = 0
-            with T.no_grad():
-                for batch in iter(data_loader):
-
-                    X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
-
-                    output = ae.forward(X)
-                    predictions = T.argmax(output.label_predictions, -1)
-
-                    n_correct += predictions.eq(y).sum().item()
-                    total += len(batch[0])
-
-            return n_correct / total
-
-        callbacks.append(lambda epoch, ae, train_loss:
-                         train_accuracies.append(measure_accuracy(train_dataloader)))
-        callbacks.append(lambda epoch, ae, train_loss:
-                         test_accuracies.append(measure_accuracy(test_dataloader)))
-    fit(ae,
-        train_dataloader,
-        criterion,
-        hyperparameters,
-        epoch_end_callbacks=callbacks,
-        supervised=supervised,
-        verbose=verbose)
-
-    warnings.warn("train_and_measure is deprecated. Use Experiment instead")
-
-    if not supervised:
-        return train_losses, test_losses
-
-    return train_losses, test_losses, train_accuracies, test_accuracies
-
-
 def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
