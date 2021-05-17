@@ -236,7 +236,7 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
             if type == "line":
                 df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
                                              'predicted': output.squeeze().tolist()})
-                df.index.name = "t"
+                df.index.name = "Timestep"
 
                 sns.lineplot(data=df, dashes=False)
                 plt.ylabel("y")
@@ -277,6 +277,26 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
 
     plt.title(title)
     plt.show()
+
+
+def draw_prediction_sample(ae, data, n_samples=1, title="example"):
+    samples = T.utils.data.Subset(data, list(range(0, n_samples)))
+    loader = DataLoader(samples, batch_size=n_samples)
+    X = next(iter(loader))
+
+    with T.no_grad():
+        prediction = ae.forward(X.to(DEVICE)).predicted_value
+
+    for actual, pred in zip(X, prediction):
+        actual, pred = actual.squeeze(-1), pred.squeeze(-1)
+        df = pd.DataFrame({'actual': actual[1:].cpu(),
+                           'predicted': pred[:-1].cpu()})
+
+        df.index.name = "Timestep"
+        sns.lineplot(data=df, dashes=False)
+        plt.ylabel("y")
+        plt.title(title)
+        plt.show()
 
 
 def plot_metric(train_values, test_values, metric_name):
