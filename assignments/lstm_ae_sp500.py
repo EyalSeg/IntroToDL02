@@ -38,11 +38,13 @@ if __name__ == "__main__":
     load_model = False
     model_name = "lstm_ae_sp500"
 
+    if supervised:
+        model_path = f"{model_name}/supervised"
+    else:
+        model_path = f"{model_name}/un_supervised"
+
     if load_model:
-        if supervised:
-            ae.load_state_dict(T.load(f"../data/model/{model_name}/supervised"))
-        else:
-            ae.load_state_dict(T.load(f"../data/model/{model_name}/un_supervised"))
+        ae.load_state_dict(T.load(f"../data/model/{model_path}"))
 
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     validate_loader = DataLoader(valid_data, batch_size=hyperparameters.batch_size)
@@ -53,7 +55,7 @@ if __name__ == "__main__":
                                 verbose=True,
                                 supervised=supervised,
                                 save_interval=50,
-                                model_name=model_name
+                                model_path=model_path
                                 )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)

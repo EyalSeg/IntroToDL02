@@ -85,12 +85,17 @@ if __name__ == "__main__":
 
             return reconstruction_loss
 
+    if settings["supervised"]:
+        model_path = f"{settings['model_name']}/supervised"
+    else:
+        model_path = f"{settings['model_name']}/un_supervised"
+
     train_losses, test_losses, train_accuracy, test_accuracy = \
         utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters,
                                 supervised=settings['supervised'],
                                 verbose=True,
                                 save_interval=50,
-                                model_name=settings['model_name']
+                                model_path=model_path
                                 )
 
     utils.plot_metric(train_losses, test_losses, "Loss")

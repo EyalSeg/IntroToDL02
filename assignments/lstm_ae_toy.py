@@ -75,11 +75,13 @@ if __name__ == "__main__":
     load_model = False
     model_name = "lstm_ae_toy"
 
+    if regression:
+        model_path = f"{model_name}/regression"
+    else:
+        model_path = f"{model_name}/reconstruction"
+
     if load_model:
-        if regression:
-            ae.load_state_dict(T.load(f"../data/model/{model_name}/regression"))
-        else:
-            ae.load_state_dict(T.load(f"../data/model/{model_name}/reconstruction"))
+        ae.load_state_dict(T.load(f"../data/model/{model_path}"))
 
     train_dataloader = DataLoader(train_data, batch_size=best_params.batch_size, shuffle=True)
     validate_loader = DataLoader(valid_data, batch_size=len(valid_data))
@@ -89,7 +91,7 @@ if __name__ == "__main__":
         utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params,
                                 verbose=True,
                                 save_interval=50,
-                                model_name=model_name
+                                model_path=model_path
                                 )
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
