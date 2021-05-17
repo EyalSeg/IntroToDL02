@@ -81,6 +81,7 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
 
 def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, epoch_end_callbacks=(),
         supervised=False, verbose=False):
+    criterion = criterion if isinstance(criterion, dict) else {"loss":criterion}
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
@@ -89,7 +90,8 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
         for batch in iter(train_dataloader):
             optimizer.zero_grad()
 
-            loss = batch_loss(ae, batch, criterion, supervised=supervised)
+            losses = batch_losses(ae, batch, criterion, supervised=supervised)
+            loss = sum(losses.values())
             loss.backward()
 
             if hyperparameters.grad_clipping is not None:
@@ -97,10 +99,11 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
 
             optimizer.step()
 
-            epoch_losses.append(loss.item())
+            epoch_losses.append(losses)
             batch_sizes.append(len(batch))
 
-        epoch_loss = np.average(epoch_losses, weights=batch_sizes)
+        epoch_loss = {name: [loss_dict[name].item() for loss_dict in epoch_losses] for name in criterion.keys()}
+        epoch_loss = {name: np.average(loss_list, weights=batch_sizes) for name, loss_list in epoch_loss.items()}
 
         if verbose:
             print(f"Epoch: {epoch} loss: {epoch_loss}")
@@ -109,10 +112,10 @@ def fit(ae, train_dataloader, criterion, hyperparameters:LstmAEHyperparameters, 
             callback(epoch, ae, epoch_loss)
 
 
-def epoch_loss(ae, dataloder, criterion, supervised=False):
+def epoch_loss(ae, dataloader, criterion, supervised=False):
     losses, batch_sizes = [], []
 
-    for batch in iter(dataloder):
+    for batch in iter(dataloader):
         losses.append(batch_loss(ae, batch, criterion, supervised=supervised).item())
         batch_sizes.append(len(batch))
 
@@ -132,8 +135,27 @@ def batch_loss(ae, batch, criterion, supervised=False):
         return criterion(output, X)
 
 
+def batch_losses(ae, batch, criterion_dict, supervised=False):
+    return {name: batch_loss(ae, batch, criterion, supervised=supervised)
+            for name, criterion in criterion_dict.items()}
+
+
+def epoch_losses(ae, dataloader, criterion_dict, supervised=False):
+    loss_dicts, batch_sizes = [], []
+
+    for batch in iter(dataloader):
+        loss_dicts.append(batch_losses(ae, batch, criterion_dict, supervised=supervised))
+        batch_sizes.append(len(batch))
+
+    losses = {name: [loss_dict[name].item() for loss_dict in loss_dicts] for name in criterion_dict.keys()}
+    losses = {name: np.average(loss_list, weights=batch_sizes) for name, loss_list in losses.items()}
+
+    return losses
+
+
 def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
                       verbose=False):
+
     train_losses = []
     test_losses = []
 
