@@ -177,16 +177,16 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
             output = ae.forward(sample).output_sequence
 
             if type == "line":
-                df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
-                                             'predicted': output.squeeze().tolist()})
-                df.index.name = "Timestep"
+                df = pd.DataFrame.from_dict({'Actual Signal': sample.squeeze().tolist(),
+                                             'Reconstructed Signal': output.squeeze().tolist()})
+                df.index.name = "Time Step"
 
                 sns.lineplot(data=df, dashes=False)
-                plt.ylabel("y")
+                plt.ylabel("Signal Value")
 
             elif type == "image":
                 images = [sample_cpu, output.squeeze(0).cpu()]
-                labels = ["original", "reconstructed"]
+                labels = ["Original Image", "Reconstructed Image"]
                 grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
 
             else:
