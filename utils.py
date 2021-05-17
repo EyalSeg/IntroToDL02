@@ -155,6 +155,8 @@ def epoch_losses(ae, dataloader, criterion_dict, supervised=False):
 
 def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
                       verbose=False):
+    import warnings
+    warnings.warn("train_and_measure is deprecated. Use Experiment instead")
 
     train_losses = []
     test_losses = []
@@ -199,6 +201,8 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
         epoch_end_callbacks=callbacks,
         supervised=supervised,
         verbose=verbose)
+
+    warnings.warn("train_and_measure is deprecated. Use Experiment instead")
 
     if not supervised:
         return train_losses, test_losses
