@@ -75,12 +75,12 @@ if __name__ == "__main__":
     cel = nn.CrossEntropyLoss()
 
     if settings["supervised"]:
-        def criterion(output: AutoencoderClassifierOutput, input_sequence, labels):
+        def criterion(output: AutoencoderClassifierOutput, labels):
             classification_loss = cel(output.label_predictions, labels)
 
             return classification_loss
     else:
-        def criterion(output: AutoencoderClassifierOutput, input_sequence, labels):
+        def criterion(output: AutoencoderClassifierOutput, input_sequence):
             reconstruction_loss = mse(output.output_sequence, input_sequence)
 
             return reconstruction_loss
