@@ -78,13 +78,13 @@ def train_validate_test_split(dataset, train_ratio=0.6, validate_ratio=0.2, test
 
 
 def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters, epoch_end_callbacks=(),
-        supervised=False, verbose=False, save_interval=None, model_name=None,
+        supervised=False, verbose=False, save_interval=None, model_path=None,
         regression=False):
     optimizer = optim.Adam(ae.parameters(), lr=hyperparameters.lr)
 
     for epoch in range(hyperparameters.epochs):
         if save_interval is not None and epoch % save_interval == 0:
-            save_model(ae, model_name, supervised=supervised)
+            save_model(ae, model_path)
 
         epoch_losses, batch_sizes = [], []
 
@@ -110,9 +110,9 @@ def fit(ae, train_dataloader, criterion, hyperparameters: LstmAEHyperparameters,
         epoch_loss = np.average(epoch_losses, weights=batch_sizes)
 
         if verbose:
-            print(f"Epoch: {epoch} loss: {epoch_loss}")
-
-            save_verbose_prints(epoch, epoch_loss, model_name, supervised=supervised)
+            text = f"Epoch: {epoch} loss: {epoch_loss}"
+            print(text)
+            save_verbose_prints(text=text, model_path=model_path)
 
         for callback in epoch_end_callbacks:
             callback(epoch, ae, epoch_loss)
@@ -151,18 +151,14 @@ def save_model(ae, model_name, supervised=False):
         T.save(ae.state_dict(), f"../data/model/{model_name}/un_supervised")
 
 
-def save_verbose_prints(epoch, epoch_loss, model_name, supervised=False):
-    if supervised:
-        f = open(f"../data/results/{model_name}/supervised.txt", "a")
-    else:
-        f = open(f"../data/results/{model_name}/un_supervised.txt", "a")
-
-    f.write(f"Epoch: {epoch} loss: {epoch_loss}\n")
+def save_verbose_prints(text, model_path):
+    f = open(f"../data/results/{model_path}", "a")
+    f.write(text)
     f.close()
 
 
 def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=False,
-                      verbose=False, save_interval=None, model_name=None
+                      verbose=False, save_interval=None, model_path=None
                       ):
     train_losses = []
     test_losses = []
@@ -179,6 +175,7 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
 
     train_accuracies = []
     test_accuracies = []
+
     if supervised:
         def measure_accuracy(data_loader):
             n_correct = 0
@@ -199,6 +196,19 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
                          train_accuracies.append(measure_accuracy(train_dataloader)))
         callbacks.append(lambda epoch, ae, train_loss:
                          test_accuracies.append(measure_accuracy(test_dataloader)))
+
+        if verbose:
+            def verbose_callback(epoch, ae, train_loss):
+                text_train = f"Epoch {epoch}, Accuracy (Train): {measure_accuracy(train_dataloader)}"
+                text_test = f"Epoch {epoch}, Accuracy (Test): {measure_accuracy(test_dataloader)}"
+                text = text_train, "\n", text_test
+
+                print(text)
+
+                save_verbose_prints(text=text, model_path=model_path)
+
+            callbacks.append(verbose_callback)
+
     fit(ae,
         train_dataloader,
         criterion,
@@ -207,8 +217,7 @@ def train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperpar
         supervised=supervised,
         verbose=verbose,
         save_interval=save_interval,
-        model_name=model_name,
-        regression=regression
+        model_path=model_path
         )
 
     if not supervised:
