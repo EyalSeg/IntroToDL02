@@ -22,17 +22,20 @@ class Encoder(nn.Module):
     def __init__(self, seq_dim, encoding_dim, num_layers=1, device=DEVICE):
         super(Encoder, self).__init__()
 
+        self.num_layers = num_layers
+        self.encoding_dim = encoding_dim
+
         self.rnn = nn.LSTM(input_size=seq_dim,
-                           hidden_size=encoding_dim,
-                           num_layers=num_layers,
+                           hidden_size=self.encoding_dim,
+                           num_layers=self.num_layers,
                            batch_first=True)
         init_weights(self.rnn)
         self.to(device)
 
-    def forward(self, X):
-        X_, (h_n, c_n) = self.rnn(X)
+    def forward(self, X, context=None):
+        X_, context = self.rnn(X) if context is None else self.rnn(X, context)
 
-        return X_, h_n[-1]
+        return X_, context
 
 
 class Decoder(nn.Module):
@@ -69,13 +72,30 @@ class LstmAutoEncoder(nn.Module):
 
         return AutoencoderOutput(x_)
 
-    def encode(self, X):
-        return self.encoder(X)
+    def encode(self, X, context=None):
+        X_encoded, (h_n, c_n) = self.encoder(X, context)
+        h_n = h_n[-1]
+
+        return X_encoded, h_n
+
+    def encode_stepwise(self, X):
+        encoded_X = None
+        context = None
+        hidden_states = None
+        for i in range(X.shape[1]):
+            encoded, context = self.encoder.forward(X[:, i, :].unsqueeze(1), context)
+            encoded_X = encoded if encoded_X is None else T.cat((encoded_X, encoded), 1)
+
+            state = context[0][-1]
+            state = state.unsqueeze(1) # add a temporal dimension
+            hidden_states = state if hidden_states is None else T.cat((hidden_states, state), 1)
+
+        return encoded_X, hidden_states
 
     def decode(self, temporal_output, context):
-        context = context.unsqueeze(1).repeat((1, temporal_output.shape[1], 1))
-        return self.decoder(context)
-        # return self.decoder(temporal_output)
+        # context = context.unsqueeze(1).repeat((1, temporal_output.shape[1], 1))
+        # return self.decoder(context)
+        return self.decoder(temporal_output)
 
     def to(self, device):
         self.device = device
