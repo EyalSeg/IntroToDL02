@@ -4,13 +4,14 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 import utils
 
 from data.synthetic_data import SyntheticDataset
 from grid_search import tune
 from utils import LstmAEHyperparameters
+from experiment import Experiment
 
 sns.set_theme(style="darkgrid")
 
@@ -21,30 +22,31 @@ T.set_default_dtype(T.double)
 
 if __name__ == "__main__":
     dataset = SyntheticDataset(file)
+    dataset = Subset(dataset, list(range(1000)))
 
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
 
     mse = nn.MSELoss()
     criterion = lambda output, input: mse(output.output_sequence, input)
+    experiment = Experiment(criterion)
 
     should_tune = False # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
-            'epochs': [700],
+            'epochs': [300],
             'seq_dim': [1],
-            'batch_size': [128],
+            'batch_size': [1024],
             'num_layers': [2],
             'latent_size': [256],
-            'lr': [0.0001, 0.001],
-            # 'grad_clipping': [None, 0.01, 0.1, 0.5, 1, 2],
-            'grad_clipping': [None, 1],
+            'lr': [0.001, 0.0001],
+            'grad_clipping': [None, 1, 0.5, 2],
         }
 
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
 
-        best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=4)
+        best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=1)
         best_params = LstmAEHyperparameters(**best_params)
 
         print("Best parameters are:")
@@ -55,14 +57,14 @@ if __name__ == "__main__":
 
     else:
         best_params = LstmAEHyperparameters(
-            epochs=200,
+            epochs=150,
             seq_dim=1,
-            batch_size=256,
+            batch_size=1024,
 
-            num_layers=5,
-            lr=0.001,
-            latent_size=256,
-            grad_clipping=None
+            num_layers=2,
+            lr=0.01,
+            latent_size=64,
+            grad_clipping=1
         )
 
     ae = best_params.create_ae()
@@ -71,13 +73,13 @@ if __name__ == "__main__":
     validate_loader = DataLoader(valid_data, batch_size=len(valid_data))
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
-    train_losses, test_losses = \
-        utils.train_and_measure(ae, train_dataloader, validate_loader, criterion, best_params, verbose=True)
+    results_df = experiment.run(ae, train_dataloader, test_loader, best_params, verbose=True, measure_every=10)
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
-    utils.plot_metric(train_losses, test_losses, "Loss")
+    sns.lineplot(data=results_df, dashes=False)
+    plt.show()
 
-    print(f"Test loss: {test_losses[-1]}")
+    print(f"Test loss: {results_df.iloc[-1]['test_loss']}")
 
 
 
