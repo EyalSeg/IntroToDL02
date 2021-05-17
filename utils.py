@@ -133,9 +133,12 @@ def batch_loss(ae, batch, criterion, supervised=False):
         X, y = batch[0].to(DEVICE), batch[1].to(DEVICE)
 
         output = ae.forward(X)
-        return criterion(output, X, y)
+        return criterion(output, y)
     else:
-        X = batch.to(DEVICE)
+        try:
+            X = batch.to(DEVICE)
+        except:
+            X = batch[0].to(DEVICE)
 
         output = ae.forward(X)
         return criterion(output, X)
