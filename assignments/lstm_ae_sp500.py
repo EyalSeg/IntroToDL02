@@ -5,6 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import utils
+from ae_wrappers.ae_classification_wrapper import AutoencoderClassifierOutput
 
 from data.sp500_data import SP500Dataset
 from experiment import Experiment
@@ -17,8 +18,20 @@ if __name__ == "__main__":
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
 
     mse = nn.MSELoss()
-    criterion = lambda output, input: mse(output.output_sequence, input)
-    experiment = Experiment(criterion)
+    cel = nn.CrossEntropyLoss()
+
+    supervised = True
+
+    if supervised:
+        def criterion(output: AutoencoderClassifierOutput, input_sequence, labels):
+            reconstruction_loss = mse(output.output_sequence, input_sequence)
+            classification_loss = cel(output.label_predictions, labels)
+
+            return reconstruction_loss + classification_loss
+    else:
+        criterion = lambda output, input: mse(output.output_sequence, input)
+
+    experiment = Experiment(criterion, supervised=supervised)
 
     hyperparameters = utils.LstmAEHyperparameters(
         epochs=50,
