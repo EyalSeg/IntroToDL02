@@ -4,8 +4,8 @@ from torchvision import datasets
 import pandas as pd
 import seaborn as sns
 import numpy as np
-import matplotlib.pyplot as plt
 import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
 
 
 from torch.utils.data import DataLoader, SubsetRandomSampler
@@ -13,8 +13,8 @@ from dataclasses import dataclass
 
 import utils
 from ae_wrappers.ae_classification_wrapper import AutoEncoderClassifier, AutoencoderClassifierOutput
+from experiment import Experiment
 
-from grid_search import tune
 from utils import LstmAEHyperparameters
 
 sns.set_theme(style="darkgrid")
@@ -42,20 +42,20 @@ if __name__ == "__main__":
     train_data, validate_data, test_data = \
         utils.load_torch_dataset(datasets.MNIST, transform=transform, cache_path="../data/cache")
 
-    # train_data = T.utils.data.Subset(train_data, list(range(0, 1000)))
-    # validate_data = T.utils.data.Subset(validate_data, list(range(0, 200)))
-    # test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
+    train_data = T.utils.data.Subset(train_data, list(range(0, 1000)))
+    validate_data = T.utils.data.Subset(validate_data, list(range(0, 200)))
+    test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
 
     hyperparameters = AEClassifierHyperparameters(
-        epochs=250,
+        epochs=3,
         seq_dim=28,
-        batch_size=64,
+        batch_size=1024,
         n_classes=10,
 
-        num_layers=5,
+        num_layers=2,
         lr=0.001,
         latent_size=256,
-        grad_clipping=None
+        grad_clipping=0.5
     )
 
     ae = hyperparameters.create_ae()
@@ -73,16 +73,22 @@ if __name__ == "__main__":
 
         return reconstruction_loss + classification_loss
 
-    train_losses, test_losses, train_accuracy, test_accuracy = \
-        utils.train_and_measure(ae, train_dataloader, test_dataloader, criterion, hyperparameters, supervised=True,
-                                verbose=True)
+    experiment = Experiment(criterion, {'accuracy': Experiment.measure_accuracy}, supervised=True)
+    results_df = experiment.run(ae, train_dataloader, test_dataloader, hyperparameters, verbose=True, measure_every=1)
 
-    utils.plot_metric(train_losses, test_losses, "Loss")
-    utils.plot_metric(train_accuracy, test_accuracy, "Accuracy")
+    sns.lineplot(data=results_df[['train_loss', 'test_loss']],
+                 dashes=False)
+    plt.title("Loss")
+    plt.show()
+
+    sns.lineplot(data=results_df[['train_accuracy', 'test_accuracy']],
+                 dashes=False)
+    plt.title("Accuracy")
+    plt.show()
 
     test_images = [tensor for tensor, label in test_data]
 
     utils.draw_reconstruction_sample(ae, test_images, n_samples=2, type="image")
     utils.draw_classification_sample(ae, test_data, n_samples=9, type="image")
 
-    print(f"Test loss: {test_losses[-1]}")
+    print(f"Test loss: {results_df.iloc[-1]['test_loss']}")
