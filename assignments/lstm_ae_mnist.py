@@ -47,7 +47,7 @@ if __name__ == "__main__":
     test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
 
     hyperparameters = AEClassifierHyperparameters(
-        epochs=3,
+        epochs=50,
         seq_dim=28,
         batch_size=1024,
         n_classes=10,

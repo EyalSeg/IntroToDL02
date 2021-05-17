@@ -1,10 +1,13 @@
 import torch as T
 import torch.nn as nn
 from torch.utils.data import DataLoader
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 import utils
 
 from data.sp500_data import SP500Dataset
+from experiment import Experiment
 
 file = "../data/cache/sp500.csv"
 
@@ -15,9 +18,10 @@ if __name__ == "__main__":
 
     mse = nn.MSELoss()
     criterion = lambda output, input: mse(output.output_sequence, input)
+    experiment = Experiment(criterion)
 
-    hyperparameters= utils.LstmAEHyperparameters(
-        epochs=250,
+    hyperparameters = utils.LstmAEHyperparameters(
+        epochs=50,
         seq_dim=1,
         batch_size=32,
 
@@ -33,11 +37,11 @@ if __name__ == "__main__":
     validate_loader = DataLoader(valid_data, batch_size=hyperparameters.batch_size)
     test_loader = DataLoader(test_data, batch_size=hyperparameters.batch_size)
 
-    train_losses, test_losses = \
-        utils.train_and_measure(ae, train_dataloader, test_loader, criterion, hyperparameters, verbose=True)
+    results_df = experiment.run(ae, train_dataloader, test_loader, hyperparameters, verbose=True, measure_every=10)
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
-    utils.plot_metric(train_losses, test_losses, "Loss")
+    sns.lineplot(data=results_df, dashes=False)
+    plt.show()
 
-    print(f"Test loss: {test_losses[-1]}")
+    print(f"Test loss: {results_df.iloc[-1]['test_loss']}")
 
