@@ -5,7 +5,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import utils
-from ae_wrappers.ae_classification_wrapper import AutoencoderClassifierOutput
 
 from data.sp500_data import SP500Dataset
 from experiment import Experiment
@@ -20,23 +19,19 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     cel = nn.CrossEntropyLoss()
 
-    supervised = True
+    prediction = True
 
-    if supervised:
-        def criterion(output: AutoencoderClassifierOutput, input_sequence, labels):
-            reconstruction_loss = mse(output.output_sequence, input_sequence)
-            classification_loss = cel(output.label_predictions, labels)
-
-            return reconstruction_loss + classification_loss
+    if prediction:
+        criterion = lambda output, input: mse(output.output_sequence[1:], input[:-1])
     else:
         criterion = lambda output, input: mse(output.output_sequence, input)
 
-    experiment = Experiment(criterion, supervised=supervised)
+    experiment = Experiment(criterion)
 
     hyperparameters = utils.LstmAEHyperparameters(
-        epochs=50,
+        epochs=100,
         seq_dim=1,
-        batch_size=32,
+        batch_size=1024,
 
         num_layers=1,
         lr=0.0005,
@@ -54,6 +49,12 @@ if __name__ == "__main__":
 
     utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
     sns.lineplot(data=results_df, dashes=False)
+
+    if prediction:
+        plt.title("S&P500 Data Set Prediction Loss")
+    else:
+        plt.title("S&P500 Data Set Training Loss")
+
     plt.show()
 
     print(f"Test loss: {results_df.iloc[-1]['test_loss']}")
