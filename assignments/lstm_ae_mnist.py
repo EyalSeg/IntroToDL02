@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
     test_images = [tensor for tensor, label in test_data]
 
-    utils.draw_reconstruction_sample(ae, test_images, n_samples=2, type="image")
+    utils.draw_reconstruction_sample(ae, test_images, n_samples=3, type="image")
     utils.draw_classification_sample(ae, test_data, n_samples=9, type="image")
 
     print(f"Test loss: {results_df.iloc[-1]['test_loss']}")
