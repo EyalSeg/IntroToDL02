@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import seaborn_image as isns
 
-from pytorch_metric_learning import losses, reducers
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union
@@ -187,7 +186,7 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
             elif type == "image":
                 images = [sample_cpu, output.squeeze(0).cpu()]
                 labels = ["Original Image", "Reconstructed Image"]
-                grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
+                isns.ImageGrid(images, orientation="h", cbar_label=labels)
 
             else:
                 raise Exception(f'type can be either "line" or "image", but was {type}.')
@@ -211,7 +210,7 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
         labels = [tensor.item() for tensor in list(y_pred)]
         labels = [str(label) for label in labels]
 
-        grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
+        isns.ImageGrid(images, orientation="h", cbar_label=labels)
 
     elif type == "line":
         raise NotImplemented(f"No support for drawing lines yet")

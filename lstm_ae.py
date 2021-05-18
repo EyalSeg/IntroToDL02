@@ -93,8 +93,6 @@ class LstmAutoEncoder(nn.Module):
         return encoded_X, hidden_states
 
     def decode(self, temporal_output, context):
-        # context = context.unsqueeze(1).repeat((1, temporal_output.shape[1], 1))
-        # return self.decoder(context)
         return self.decoder(temporal_output)
 
     def to(self, device):
