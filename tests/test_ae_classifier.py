@@ -34,7 +34,7 @@ class Test_AE_Classifier():
     @pytest.mark.parametrize("batch_size", [1, 100])
     @pytest.mark.parametrize("seq_dim", [1, 5])
     @pytest.mark.parametrize("num_layers", [1, 2])
-    @pytest.mark.parametrize("n_classes", [1, 10])
+    @pytest.mark.parametrize("n_classes", [1, 2, 10])
     def test_predictions_sum_to_one(self, seq_length, latent_size, batch_size, seq_dim, num_layers, n_classes, ae):
         input = T.randn(batch_size, seq_length, seq_dim).to(device)
 
