@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     else:
         best_params = LstmAEHyperparameters(
-            epochs=50,
+            epochs=250,
             seq_dim=1,
             batch_size=1024,
 

@@ -19,7 +19,7 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     cel = nn.CrossEntropyLoss()
 
-    prediction = True
+    prediction = False
 
     if prediction:
         criterion = lambda output, input: mse(output.output_sequence[1:], input[:-1])
