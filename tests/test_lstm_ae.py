@@ -64,3 +64,37 @@ class Test_Lstm_AE:
         slope = coeffs[0]
 
         assert slope < -0, "Learning does not decrease the training loss!"
+
+    @pytest.mark.parametrize("seq_length", [50])
+    @pytest.mark.parametrize("latent_size", [20])
+    @pytest.mark.parametrize("batch_size", [1, 100])
+    @pytest.mark.parametrize("seq_dim", [1, 5])
+    @pytest.mark.parametrize("num_layers", [1, 2])
+    @pytest.mark.parametrize("input", [
+        lambda batch, length, dim: T.randn(batch, length, dim, dtype=T.float32).to(device),
+    ])
+    def test_encode_stepwise_temporal_output(self, ae, input, batch_size, seq_length, seq_dim):
+        input = input(batch_size, seq_length, seq_dim)
+
+        encoded_X, _ = ae.encode(input)
+        encoded_X_stepwise, _ = ae.encode_stepwise(input)
+
+        assert T.allclose(encoded_X, encoded_X_stepwise), "Encoded temporal output is different when encoding stepwise!"
+
+    @pytest.mark.parametrize("seq_length", [50])
+    @pytest.mark.parametrize("latent_size", [20])
+    @pytest.mark.parametrize("batch_size", [1, 100])
+    @pytest.mark.parametrize("seq_dim", [1, 5])
+    @pytest.mark.parametrize("num_layers", [1, 2])
+    @pytest.mark.parametrize("input", [
+        lambda batch, length, dim: T.randn(batch, length, dim, dtype=T.float32).to(device),
+    ])
+    def test_encode_stepwise_hidden_state(self, ae, input, batch_size, seq_length, seq_dim):
+        input = input(batch_size, seq_length, seq_dim)
+
+        _, state = ae.encode(input)
+        _, states = ae.encode_stepwise(input)
+        state_stepwise = states[:, -1]
+
+        assert T.allclose(state, state_stepwise), "Last hidden state is different when encoding stepwise!"
+

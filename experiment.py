@@ -26,7 +26,7 @@ class Experiment:
         self.__results = pd.DataFrame(columns=self.columns)
 
         def on_epoch_end(epoch, ae, train_losses):
-            if self.__results.shape[0] % measure_every == 0:
+            if self.__results.shape[0] % measure_every == 0 or epoch == hyperparameters.epochs - 1:
                 row = self.__measure(ae, train_dataloader, test_dataloader, train_losses)
             else:
                 row = {f"train_{key}": value for key, value in train_losses.items()}
