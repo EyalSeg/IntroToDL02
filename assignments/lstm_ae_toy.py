@@ -68,8 +68,8 @@ if __name__ == "__main__":
 
             num_layers=2,
             lr=0.001,
-            latent_size=64,
-            grad_clipping=1
+            latent_size=256,
+            grad_clipping=.5
         )
 
     ae = best_params.create_ae()

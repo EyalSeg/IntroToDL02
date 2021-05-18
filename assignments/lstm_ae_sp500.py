@@ -24,7 +24,7 @@ if __name__ == "__main__":
     }
 
     hyperparameters= utils.LstmAEHyperparameters(
-        epochs=25,
+        epochs=250,
         seq_dim=1,
         batch_size=64,
 
