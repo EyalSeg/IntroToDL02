@@ -1,6 +1,5 @@
 import torch as T
 import torch.nn as nn
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -29,7 +28,7 @@ if __name__ == "__main__":
     criterion = lambda output, input: mse(output.output_sequence, input)
     experiment = Experiment(criterion)
 
-    should_tune = True  # change to false to use predefined hyperparameters
+    should_tune = True
     if should_tune:
         param_choices = {
             'epochs': [200],
@@ -44,9 +43,11 @@ if __name__ == "__main__":
 
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
+
             verbose = True
             if verbose:
                 print(f"Tuning for parameters: {params}")
+
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
 
 

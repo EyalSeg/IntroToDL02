@@ -1,14 +1,11 @@
-import torch as T
-import torch.nn as nn
-import torch.optim as optim
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 
 import utils
 
-from data.sp500_data import SP500Dataset # , SP500PredictionsDataset
+from data.sp500_data import SP500Dataset
 from ae_wrappers.ae_regression_wrapper import *
 from experiment import Experiment
 
@@ -17,7 +14,6 @@ sns.set_theme(style="darkgrid")
 
 if __name__ == "__main__":
     dataset = SP500Dataset(file, normalize=True)
-    # dataset = Subset(dataset, range(1000))
 
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
 

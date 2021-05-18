@@ -1,14 +1,12 @@
 import torch as T
 import torch.nn as nn
 from torchvision import datasets
-import pandas as pd
 import seaborn as sns
-import numpy as np
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 
 
-from torch.utils.data import DataLoader, SubsetRandomSampler
+from torch.utils.data import DataLoader
 from dataclasses import dataclass
 
 import utils
@@ -35,7 +33,6 @@ class AEClassifierHyperparameters(LstmAEHyperparameters):
 if __name__ == "__main__":
     transform = transforms.Compose([
         transforms.ToTensor(),
-        #  transforms.Lambda(lambda X: T.ravel(X).unsqueeze(-1))
         transforms.Lambda(lambda X: X.squeeze())
     ])
 
