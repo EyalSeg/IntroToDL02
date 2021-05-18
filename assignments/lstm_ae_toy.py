@@ -19,7 +19,6 @@ file = "../data/cache/synthetic.csv"
 DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 T.set_default_dtype(T.double)
 
-
 if __name__ == "__main__":
     dataset = SyntheticDataset(file)
     dataset = Subset(dataset, list(range(1000)))
@@ -30,21 +29,26 @@ if __name__ == "__main__":
     criterion = lambda output, input: mse(output.output_sequence, input)
     experiment = Experiment(criterion)
 
-    should_tune = False # change to false to use predefined hyperparameters
+    should_tune = True  # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
-            'epochs': [300],
+            'epochs': [200],
             'seq_dim': [1],
             'batch_size': [1024],
             'num_layers': [2],
             'latent_size': [256],
             'lr': [0.001, 0.0001],
-            'grad_clipping': [None, 1, 0.5, 2],
+            'grad_clipping': [None, 1, 0.5],
         }
+
 
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
+            verbose = True
+            if verbose:
+                print(f"Tuning for parameters: {params}")
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters)
+
 
         best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=1)
         best_params = LstmAEHyperparameters(**best_params)
@@ -80,7 +84,3 @@ if __name__ == "__main__":
     plt.show()
 
     print(f"Test loss: {results_df.iloc[-1]['test_loss']}")
-
-
-
-
