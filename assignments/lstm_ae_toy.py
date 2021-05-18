@@ -62,7 +62,7 @@ if __name__ == "__main__":
             batch_size=1024,
 
             num_layers=2,
-            lr=0.01,
+            lr=0.001,
             latent_size=64,
             grad_clipping=1
         )

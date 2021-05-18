@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, Subset
 
 import utils
 
-from data.sp500_data import SP500Dataset, SP500PredictionsDataset
+from data.sp500_data import SP500Dataset # , SP500PredictionsDataset
 from ae_wrappers.ae_regression_wrapper import *
 from experiment import Experiment
 
@@ -28,9 +28,9 @@ if __name__ == "__main__":
     }
 
     hyperparameters= utils.LstmAEHyperparameters(
-        epochs=100,
+        epochs=25,
         seq_dim=1,
-        batch_size=128,
+        batch_size=64,
 
         num_layers=2,
         lr=0.001,
