@@ -29,7 +29,7 @@ if __name__ == "__main__":
     experiment = Experiment(criterion)
 
     hyperparameters = utils.LstmAEHyperparameters(
-        epochs=100,
+        epochs=250,
         seq_dim=1,
         batch_size=1024,
 
