@@ -241,3 +241,11 @@ def plot_prediction_sample(ae, data, n_samples=1, title="example"):
         plt.show()
 
 
+def plot_metric(df: pd.DataFrame, metric_name, title=None):
+    sns.lineplot(data=df[[f"train_{metric_name}", f"test_{metric_name}"]],
+                 dashes=False)
+    if title:
+        plt.title(title)
+
+    plt.show()
+
