@@ -178,7 +178,7 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
 
             if type == "line":
                 df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
-                                             'predicted': output.squeeze().tolist()})
+                                             'reconstructed': output.squeeze().tolist()})
                 df.index.name = "Timestep"
 
                 sns.lineplot(data=df, dashes=False)
@@ -205,11 +205,11 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
     with T.no_grad():
         y_pred = ae.forward(X.to(DEVICE)).label_predictions
         y_pred = T.argmax(y_pred, dim=-1).cpu()
+        y_pred = [tensor.item() for tensor in list(y_pred)]
 
     if type == "image":
         images = list(X)
-        labels = [tensor.item() for tensor in list(y_pred)]
-        labels = [str(label) for label in labels]
+        labels = [f"Predicted: {str(pred)} Actual: {gt}" for pred, gt in zip(y_pred, y)]
 
         grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
 
@@ -236,7 +236,6 @@ def draw_prediction_sample(ae, data, n_samples=1, title="example"):
                            'predicted': pred[:-1].cpu()})
 
         df.index.name = "Timestep"
-        sns.lineplot(data=df, dashes=False)
         plt.ylabel("y")
         plt.title(title)
         plt.show()
