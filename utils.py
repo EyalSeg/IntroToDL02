@@ -236,6 +236,7 @@ def plot_prediction_sample(ae, data, n_samples=1, title="example"):
                            'predicted': pred[:-1].cpu()})
 
         df.index.name = "Timestep"
+        graph = sns.lineplot(data=df, dashes=False)
         plt.ylabel("y")
         plt.title(title)
         plt.show()
