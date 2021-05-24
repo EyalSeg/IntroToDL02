@@ -241,13 +241,3 @@ def draw_prediction_sample(ae, data, n_samples=1, title="example"):
         plt.show()
 
 
-def plot_metric(train_values, test_values, metric_name):
-    df = pd.DataFrame.from_dict({"training set": train_values,
-                                 "test set": test_values})
-    df.index.name = "Epoch"
-
-    sns.lineplot(data=df, dashes=False)
-    plt.title(f"Learn {metric_name}")
-    plt.ylabel(metric_name)
-    plt.show()
-
