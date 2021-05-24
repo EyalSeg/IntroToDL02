@@ -196,7 +196,7 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
             plt.show()
 
 
-def draw_classification_sample(ae, data, n_samples=1, title="example", type="line"):
+def plot_classification_sample(ae, data, n_samples=1, title="example", type="line"):
     samples = T.utils.data.Subset(data, list(range(0, n_samples)))
     loader = DataLoader(samples, batch_size=n_samples)
     samples = next(iter(loader))
@@ -222,7 +222,7 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
     plt.show()
 
 
-def draw_prediction_sample(ae, data, n_samples=1, title="example"):
+def plot_prediction_sample(ae, data, n_samples=1, title="example"):
     samples = T.utils.data.Subset(data, list(range(0, n_samples)))
     loader = DataLoader(samples, batch_size=n_samples)
     X = next(iter(loader))
