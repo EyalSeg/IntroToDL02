@@ -178,7 +178,7 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
 
             if type == "line":
                 df = pd.DataFrame.from_dict({'actual': sample.squeeze().tolist(),
-                                             'predicted': output.squeeze().tolist()})
+                                             'reconstructed': output.squeeze().tolist()})
                 df.index.name = "Timestep"
 
                 sns.lineplot(data=df, dashes=False)
@@ -196,7 +196,7 @@ def draw_reconstruction_sample(ae, data, n_samples=1, title="example", type="lin
             plt.show()
 
 
-def draw_classification_sample(ae, data, n_samples=1, title="example", type="line"):
+def plot_classification_sample(ae, data, n_samples=1, title="example", type="line"):
     samples = T.utils.data.Subset(data, list(range(0, n_samples)))
     loader = DataLoader(samples, batch_size=n_samples)
     samples = next(iter(loader))
@@ -205,11 +205,11 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
     with T.no_grad():
         y_pred = ae.forward(X.to(DEVICE)).label_predictions
         y_pred = T.argmax(y_pred, dim=-1).cpu()
+        y_pred = [tensor.item() for tensor in list(y_pred)]
 
     if type == "image":
         images = list(X)
-        labels = [tensor.item() for tensor in list(y_pred)]
-        labels = [str(label) for label in labels]
+        labels = [f"Predicted: {str(pred)} Actual: {gt}" for pred, gt in zip(y_pred, y)]
 
         grid = isns.ImageGrid(images, orientation="h", cbar_label=labels)
 
@@ -222,7 +222,7 @@ def draw_classification_sample(ae, data, n_samples=1, title="example", type="lin
     plt.show()
 
 
-def draw_prediction_sample(ae, data, n_samples=1, title="example"):
+def plot_prediction_sample(ae, data, n_samples=1, title="example"):
     samples = T.utils.data.Subset(data, list(range(0, n_samples)))
     loader = DataLoader(samples, batch_size=n_samples)
     X = next(iter(loader))
@@ -236,19 +236,17 @@ def draw_prediction_sample(ae, data, n_samples=1, title="example"):
                            'predicted': pred[:-1].cpu()})
 
         df.index.name = "Timestep"
-        sns.lineplot(data=df, dashes=False)
+        graph = sns.lineplot(data=df, dashes=False)
         plt.ylabel("y")
         plt.title(title)
         plt.show()
 
 
-def plot_metric(train_values, test_values, metric_name):
-    df = pd.DataFrame.from_dict({"training set": train_values,
-                                 "test set": test_values})
-    df.index.name = "Epoch"
+def plot_metric(df: pd.DataFrame, metric_name, title=None):
+    sns.lineplot(data=df[[f"train_{metric_name}", f"test_{metric_name}"]],
+                 dashes=False)
+    if title:
+        plt.title(title)
 
-    sns.lineplot(data=df, dashes=False)
-    plt.title(f"Learn {metric_name}")
-    plt.ylabel(metric_name)
     plt.show()
 

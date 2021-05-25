@@ -47,15 +47,15 @@ if __name__ == "__main__":
     test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
 
     hyperparameters = AEClassifierHyperparameters(
-        epochs=3,
+        epochs=5,
         seq_dim=28,
         batch_size=1024,
         n_classes=10,
 
         num_layers=2,
         lr=0.001,
-        latent_size=256,
-        grad_clipping=0.5
+        latent_size=64,
+        grad_clipping=None
     )
 
     ae = hyperparameters.create_ae()
@@ -67,28 +67,25 @@ if __name__ == "__main__":
     mse = nn.MSELoss()
     cel = nn.CrossEntropyLoss()
 
-    def criterion(output: AutoencoderClassifierOutput, input_sequence, labels):
-        reconstruction_loss = mse(output.output_sequence, input_sequence)
-        classification_loss = cel(output.label_predictions, labels)
-
-        return reconstruction_loss + classification_loss
+    criterion = {
+        "reconstruction_loss": lambda output, input, labels: mse(output.output_sequence, input),
+        "prediction_loss": lambda output, input, labels: cel(output.label_predictions, labels)
+    }
 
     experiment = Experiment(criterion, {'accuracy': Experiment.measure_accuracy}, supervised=True)
-    results_df = experiment.run(ae, train_dataloader, test_dataloader, hyperparameters, verbose=True, measure_every=1)
+    results_df = experiment.run(ae, train_dataloader, test_dataloader, hyperparameters, verbose=True, measure_every=10)
 
-    sns.lineplot(data=results_df[['train_loss', 'test_loss']],
-                 dashes=False)
-    plt.title("Loss")
-    plt.show()
+    results_df['train_loss'] = results_df['train_reconstruction_loss'] + results_df['train_prediction_loss']
+    results_df['test_loss'] = results_df['test_reconstruction_loss'] + results_df['test_prediction_loss']
 
-    sns.lineplot(data=results_df[['train_accuracy', 'test_accuracy']],
-                 dashes=False)
-    plt.title("Accuracy")
-    plt.show()
+    utils.plot_metric(results_df, "loss", title="Combined Loss")
+    utils.plot_metric(results_df, "reconstruction_loss", title="Reconstruction Loss")
+    utils.plot_metric(results_df, "prediction_loss", title="Prediction Loss")
+    utils.plot_metric(results_df, "accuracy", title="Accuracy")
 
     test_images = [tensor for tensor, label in test_data]
 
-    utils.draw_reconstruction_sample(ae, test_images, n_samples=2, type="image")
-    utils.draw_classification_sample(ae, test_data, n_samples=9, type="image")
+    utils.draw_reconstruction_sample(ae, test_images, n_samples=2, type="image", title="")
+    utils.plot_classification_sample(ae, test_data, n_samples=9, type="image", title="Classification Sample")
 
     print(f"Test loss: {results_df.iloc[-1]['test_loss']}")

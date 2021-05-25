@@ -17,7 +17,7 @@ class AutoEncoderClassifier(nn.Module):
         super(AutoEncoderClassifier, self).__init__()
         self.ae = ae
         self.output_layer = nn.Linear(self.ae.encoded_dim, n_classes).to(DEVICE)
-        self.activation = nn.LogSoftmax(dim=-1).to(DEVICE)
+        self.activation = nn.Softmax(dim=-1).to(DEVICE)
 
         T.nn.init.xavier_uniform_(self.output_layer.weight)
 
