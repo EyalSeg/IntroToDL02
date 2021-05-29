@@ -1,8 +1,9 @@
+import argparse
 import torch as T
 
 import pandas as pd
-from sklearn import preprocessing
 
+from sklearn import preprocessing
 from torch.utils.data import Dataset
 
 default_name = "cache/sp500.csv"
@@ -10,9 +11,8 @@ time_format = '%d/%m/%Y'
 
 
 class SP500Dataset(Dataset):
-    def __init__(self, filename=default_name, sample_ratio=1, normalize=False):
+    def __init__(self, filename=default_name, normalize=False):
         self.data = (pd.read_csv(filename, index_col=False, parse_dates=["date"]))
-        self.data = pd.DataFrame.head(self.data, n=int((len(self.data) * sample_ratio)))
 
         if normalize:
             values = self.data['high'].values.astype(float).reshape(-1, 1)
@@ -22,6 +22,7 @@ class SP500Dataset(Dataset):
 
         self.data = self.data.fillna(method="ffill", axis=1)
         self.data = self.data.fillna(method="bfill", axis=1)
+
 
     def get_dates(self):
         return self.data.columns
