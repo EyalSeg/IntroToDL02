@@ -69,18 +69,18 @@ if __name__ == "__main__":
 
     criterion = {
         "reconstruction_loss": lambda output, input, labels: mse(output.output_sequence, input),
-        "prediction_loss": lambda output, input, labels: cel(output.label_predictions, labels)
+        "classification_loss": lambda output, input, labels: cel(output.label_predictions, labels)
     }
 
     experiment = Experiment(criterion, {'accuracy': Experiment.measure_accuracy}, supervised=True)
     results_df = experiment.run(ae, train_dataloader, test_dataloader, hyperparameters, verbose=True, measure_every=10)
 
-    results_df['train_loss'] = results_df['train_reconstruction_loss'] + results_df['train_prediction_loss']
-    results_df['test_loss'] = results_df['test_reconstruction_loss'] + results_df['test_prediction_loss']
+    results_df['train_loss'] = results_df['train_reconstruction_loss'] + results_df['train_classification_loss']
+    results_df['test_loss'] = results_df['test_reconstruction_loss'] + results_df['test_classification_loss']
 
     utils.plot_metric(results_df, "loss", title="Combined Loss")
     utils.plot_metric(results_df, "reconstruction_loss", title="Reconstruction Loss")
-    utils.plot_metric(results_df, "prediction_loss", title="Prediction Loss")
+    utils.plot_metric(results_df, "classification_loss", title="Classification Loss")
     utils.plot_metric(results_df, "accuracy", title="Accuracy")
 
     test_images = [tensor for tensor, label in test_data]
