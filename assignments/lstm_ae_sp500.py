@@ -17,7 +17,7 @@ file = "../data/cache/sp500.csv"
 sns.set_theme(style="darkgrid")
 
 
-def create_train_and_evaluate_model(train_dataloader, test_loader, test_data):
+def create_train_and_evaluate_model(train_dataloader, test_loader, test_data, fold=None):
     ae = hyperparameters.create_ae()
     ae = AutoEncoderRegressor(ae)
 
@@ -27,12 +27,16 @@ def create_train_and_evaluate_model(train_dataloader, test_loader, test_data):
     results_df['train_loss'] = results_df['train_reconstruction_loss'] + results_df['train_prediction_loss']
     results_df['test_loss'] = results_df['test_reconstruction_loss'] + results_df['test_prediction_loss']
 
-    utils.plot_metric(results_df, "loss", title="Combined Loss")
-    utils.plot_metric(results_df, "reconstruction_loss", title="Reconstruction Loss")
-    utils.plot_metric(results_df, "prediction_loss", title="Prediction Loss")
+    utils.plot_metric(results_df, "loss", title="Combined Loss" if fold is None else f"Combined Loss (fold {fold})")
+    utils.plot_metric(results_df, "reconstruction_loss",
+                      title="Reconstruction Loss" if fold is None else f"Reconstruction Loss (fold {fold})")
+    utils.plot_metric(results_df, "prediction_loss",
+                      title="Prediction Loss" if fold is None else f"Prediction Loss (fold {fold})")
 
-    utils.draw_reconstruction_sample(ae, test_data, n_samples=2, title="Reconstruction Sample")
-    utils.plot_prediction_sample(ae, test_data, n_samples=2, title="Prediction Sample")
+    utils.draw_reconstruction_sample(ae, test_data, n_samples=2,
+                                     title="Reconstruction Sample" if fold is None else f"Reconstruction Sample (fold {fold})")
+    utils.plot_prediction_sample(ae, test_data, n_samples=2,
+                                 title="Prediction Sample" if fold is None else f"Prediction Sample (fold {fold})")
 
     print(f"Test Reconstruction Loss: {results_df.iloc[-1]['test_reconstruction_loss']}")
     print(f"Test Prediction Loss: {results_df.iloc[-1]['test_prediction_loss']}")
@@ -76,7 +80,7 @@ if __name__ == "__main__":
                                                   sampler=test_sub_sampler)
             print(f"K-Fold {fold} iteration")
             create_train_and_evaluate_model(train_dataloader=train_loader, test_loader=test_loader,
-                                            test_data=test_data)
+                                            test_data=test_data, fold=fold)
             print()
 
     else:
@@ -85,5 +89,3 @@ if __name__ == "__main__":
         test_loader = DataLoader(test_data, batch_size=hyperparameters.batch_size)
         create_train_and_evaluate_model(train_dataloader=train_dataloader, test_loader=test_loader,
                                         test_data=test_data)
-
-
