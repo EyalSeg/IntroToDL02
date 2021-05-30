@@ -153,7 +153,12 @@ def epoch_losses(ae, dataloader, criterion_dict, supervised=False):
     return losses
 
 
-def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters, supervised=False):
+def evaluate_hyperparameters(train_data, validate_data, criterion, hyperparameters:LstmAEHyperparameters,
+                             supervised=False, verbose=False):
+
+    if verbose:
+        print(f"Evaluate hyper-parameters: {hyperparameters}")
+
     train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
     ae = hyperparameters.create_ae()
 

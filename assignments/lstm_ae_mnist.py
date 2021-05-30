@@ -36,6 +36,7 @@ if __name__ == "__main__":
     transform = transforms.Compose([
         transforms.ToTensor(),
         #  transforms.Lambda(lambda X: T.ravel(X).unsqueeze(-1))
+        # transforms.Normalize(mean=.5, std=.25, inplace=True),
         transforms.Lambda(lambda X: X.squeeze())
     ])
 
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
 
     hyperparameters = AEClassifierHyperparameters(
-        epochs=150,
+        epochs=500,
         seq_dim=28,
         batch_size=1024,
         n_classes=10,
