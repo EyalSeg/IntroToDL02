@@ -17,7 +17,7 @@ file = "../data/cache/sp500.csv"
 sns.set_theme(style="darkgrid")
 
 
-def create_train_and_evaluate_model(train_dataloader, test_loader):
+def create_train_and_evaluate_model(train_dataloader, test_loader, test_data):
     ae = hyperparameters.create_ae()
     ae = AutoEncoderRegressor(ae)
 
@@ -31,8 +31,8 @@ def create_train_and_evaluate_model(train_dataloader, test_loader):
     utils.plot_metric(results_df, "reconstruction_loss", title="Reconstruction Loss")
     utils.plot_metric(results_df, "prediction_loss", title="Prediction Loss")
 
-    utils.draw_reconstruction_sample(ae, test_loader, n_samples=2, title="Reconstruction Sample")
-    utils.plot_prediction_sample(ae, test_loader, n_samples=2, title="Prediction Sample")
+    utils.draw_reconstruction_sample(ae, test_data, n_samples=2, title="Reconstruction Sample")
+    utils.plot_prediction_sample(ae, test_data, n_samples=2, title="Prediction Sample")
 
     print(f"Test Reconstruction Loss: {results_df.iloc[-1]['test_reconstruction_loss']}")
     print(f"Test Prediction Loss: {results_df.iloc[-1]['test_prediction_loss']}")
@@ -41,6 +41,8 @@ def create_train_and_evaluate_model(train_dataloader, test_loader):
 if __name__ == "__main__":
     dataset = SP500Dataset(file, normalize=True)
     dataset = Subset(dataset, range(100))
+
+    train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
 
     mse = nn.MSELoss()
     criterion = {
@@ -73,13 +75,15 @@ if __name__ == "__main__":
             test_loader = T.utils.data.DataLoader(dataset, batch_size=hyperparameters.batch_size,
                                                   sampler=test_sub_sampler)
             print(f"K-Fold {fold} iteration")
-            create_train_and_evaluate_model(train_dataloader=train_loader, test_loader=test_loader)
+            create_train_and_evaluate_model(train_dataloader=train_loader, test_loader=test_loader,
+                                            test_data=test_data)
+            print()
 
     else:
-        train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
         train_dataloader = DataLoader(train_data, batch_size=hyperparameters.batch_size, shuffle=True)
         validate_loader = DataLoader(valid_data, batch_size=hyperparameters.batch_size)
         test_loader = DataLoader(test_data, batch_size=hyperparameters.batch_size)
-        create_train_and_evaluate_model(train_dataloader=train_dataloader, test_loader=test_loader)
+        create_train_and_evaluate_model(train_dataloader=train_dataloader, test_loader=test_loader,
+                                        test_data=test_data)
 
 
