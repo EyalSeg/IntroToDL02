@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import seaborn_image as isns
 
-from pytorch_metric_learning import losses, reducers
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Union

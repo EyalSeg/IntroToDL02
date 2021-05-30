@@ -4,7 +4,6 @@ import numpy as np
 import torch as T
 
 from torch import nn, optim
-from sklearn.linear_model import LinearRegression
 
 from lstm_ae import LstmAutoEncoder
 
@@ -40,9 +39,6 @@ class Test_Lstm_AE:
         lambda batch, length, dim: T.randn(batch, length, dim, dtype=T.float32).to(device),
     ])
     def test_fit(self, seq_length, latent_size, batch_size, seq_dim, num_layers, input, ae):
-        # x = np.linspace(-np.pi, np.pi, seq_length)
-        # input = T.tensor([[np.sin(x)]], dtype=T.float32).to(device)
-
         input = input(batch_size, seq_length, seq_dim)
 
         criterion = nn.MSELoss()
@@ -97,4 +93,3 @@ class Test_Lstm_AE:
         state_stepwise = states[:, -1]
 
         assert T.allclose(state, state_stepwise), "Last hidden state is different when encoding stepwise!"
-

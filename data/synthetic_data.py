@@ -33,7 +33,6 @@ if __name__ == "__main__":
     data = np.random.random((samples, timesteps))
     df = pd.DataFrame(data)
     df.columns = list([f"y_{t}" for t in range(timesteps)])
-    # df.index = list([f"x_{i}" for i in range(samples)])
 
     df.to_csv(args.destination, index=False)
 

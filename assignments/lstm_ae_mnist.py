@@ -1,18 +1,14 @@
 import torch as T
 import torch.nn as nn
 from torchvision import datasets
-import pandas as pd
 import seaborn as sns
-import numpy as np
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 
-
-from torch.utils.data import DataLoader, SubsetRandomSampler
+from torch.utils.data import DataLoader
 from dataclasses import dataclass
 
 import utils
-from ae_wrappers.ae_classification_wrapper import AutoEncoderClassifier, AutoencoderClassifierOutput
+from ae_wrappers.ae_classification_wrapper import AutoEncoderClassifier
 from experiment import Experiment
 
 from utils import LstmAEHyperparameters
@@ -35,8 +31,6 @@ class AEClassifierHyperparameters(LstmAEHyperparameters):
 if __name__ == "__main__":
     transform = transforms.Compose([
         transforms.ToTensor(),
-        #  transforms.Lambda(lambda X: T.ravel(X).unsqueeze(-1))
-        # transforms.Normalize(mean=.5, std=.25, inplace=True),
         transforms.Lambda(lambda X: X.squeeze())
     ])
 

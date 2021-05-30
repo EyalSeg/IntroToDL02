@@ -1,4 +1,3 @@
-import argparse
 import torch as T
 
 import pandas as pd

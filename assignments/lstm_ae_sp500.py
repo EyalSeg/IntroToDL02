@@ -1,8 +1,4 @@
-import torch as T
-import torch.nn as nn
-import torch.optim as optim
 import seaborn as sns
-import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 
 from torch.utils.data import DataLoader, Subset

@@ -1,6 +1,5 @@
 import torch as T
 import torch.nn as nn
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -19,7 +18,6 @@ file = "../data/cache/synthetic.csv"
 DEVICE = T.device('cuda' if T.cuda.is_available() else 'cpu')
 T.set_default_dtype(T.double)
 
-
 if __name__ == "__main__":
     dataset = SyntheticDataset(file)
     dataset = Subset(dataset, list(range(1000)))
@@ -30,7 +28,7 @@ if __name__ == "__main__":
     criterion = lambda output, input: mse(output.output_sequence, input)
     experiment = Experiment(criterion)
 
-    should_tune = True # change to false to use predefined hyperparameters
+    should_tune = True  # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
             'epochs': [300],
@@ -42,10 +40,12 @@ if __name__ == "__main__":
             'grad_clipping': [None, 1, 0.5, 2],
         }
 
+
         def tune_objective(**params):
             hyperparameters = LstmAEHyperparameters(**params)
             return utils.evaluate_hyperparameters(train_data, valid_data, criterion, hyperparameters,
                                                   verbose=True)
+
 
         best_params, best_loss = tune(tune_objective, param_choices, "minimize", workers=1)
         best_params = LstmAEHyperparameters(**best_params)
@@ -81,7 +81,3 @@ if __name__ == "__main__":
     plt.show()
 
     print(f"Test loss: {results_df.iloc[-1]['test_loss']}")
-
-
-
-
