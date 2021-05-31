@@ -2,12 +2,12 @@ import itertools
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import numpy as np
-import marshal
-import types
+
 
 
 def tune(func, params_dict, direction="minimize", workers=1):
     param_sets = list((dict(zip(params_dict.keys(), x)) for x in itertools.product(*params_dict.values())))
+    print(f"Tuning hyperparameters. Found {len(param_sets)} combinations")
     call = lambda args: func(**args)
 
     if workers > 1:
@@ -17,6 +17,7 @@ def tune(func, params_dict, direction="minimize", workers=1):
 
         for res in results_gen:
             scores.append(res)
+            print(f"Finished {len(scores)} combinations.")
     else:
         scores = list(map(call, param_sets))
 
