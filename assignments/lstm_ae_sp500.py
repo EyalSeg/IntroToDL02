@@ -17,7 +17,7 @@ sns.set_theme(style="darkgrid")
 
 if __name__ == "__main__":
     dataset = SP500Dataset(file, normalize=True)
-    dataset = Subset(dataset, range(100))
+    # dataset = Subset(dataset, range(100))
 
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
 
@@ -28,13 +28,13 @@ if __name__ == "__main__":
     }
 
     hyperparameters= utils.LstmAEHyperparameters(
-        epochs=100,
+        epochs=1000,
         seq_dim=1,
-        batch_size=128,
+        batch_size=32,
 
-        num_layers=2,
-        lr=0.001,
-        latent_size=64,
+        num_layers=1,
+        lr=0.01,
+        latent_size=256,
         grad_clipping=0.5
     )
 

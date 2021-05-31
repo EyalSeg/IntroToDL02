@@ -22,7 +22,7 @@ T.set_default_dtype(T.double)
 
 if __name__ == "__main__":
     dataset = SyntheticDataset(file)
-    dataset = Subset(dataset, list(range(1000)))
+    # dataset = Subset(dataset, list(range(100)))
 
     train_data, valid_data, test_data = utils.train_validate_test_split(dataset, 0.6, 0.2, 0.2)
 
@@ -33,13 +33,13 @@ if __name__ == "__main__":
     should_tune = False # change to false to use predefined hyperparameters
     if should_tune:
         param_choices = {
-            'epochs': [300],
+            'epochs': [1000],
             'seq_dim': [1],
             'batch_size': [1024],
             'num_layers': [2],
-            'latent_size': [256],
-            'lr': [0.001, 0.0001],
-            'grad_clipping': [None, 1, 0.5, 2],
+            'latent_size': [16, 32, 64, 256],
+            'lr': [0.1, 0.001, 0.0001],
+            'grad_clipping': [None, 1, 0.01, 0.001, 0.0001],
         }
 
         def tune_objective(**params):
@@ -50,21 +50,18 @@ if __name__ == "__main__":
         best_params = LstmAEHyperparameters(**best_params)
 
         print("Best parameters are:")
-        print(f"\tlatent size: {best_params.latent_size}")
-        print(f"\tlr: {best_params.lr}")
-        print(f"\tgrad_clipping: {best_params.grad_clipping}")
-        print(f"\tnum_layers: {best_params.num_layers}")
+        print(best_params)
 
     else:
         best_params = LstmAEHyperparameters(
-            epochs=150,
+            epochs=3000,
             seq_dim=1,
             batch_size=1024,
 
-            num_layers=2,
+            num_layers=1,
             lr=0.01,
-            latent_size=64,
-            grad_clipping=1
+            latent_size=32,
+            grad_clipping=0.5
         )
 
     ae = best_params.create_ae()
@@ -75,8 +72,10 @@ if __name__ == "__main__":
 
     results_df = experiment.run(ae, train_dataloader, test_loader, best_params, verbose=True, measure_every=10)
 
-    utils.draw_reconstruction_sample(ae, test_data, n_samples=2)
+    utils.draw_reconstruction_sample(ae, test_data, n_samples=2, title="Reconstruction Sample")
+
     sns.lineplot(data=results_df, dashes=False)
+    plt.title("Learning Loss")
     plt.show()
 
     print(f"Test loss: {results_df.iloc[-1]['test_loss']}")

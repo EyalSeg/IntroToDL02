@@ -42,18 +42,19 @@ if __name__ == "__main__":
     train_data, validate_data, test_data = \
         utils.load_torch_dataset(datasets.MNIST, transform=transform, cache_path="../data/cache")
 
-    train_data = T.utils.data.Subset(train_data, list(range(0, 1000)))
-    validate_data = T.utils.data.Subset(validate_data, list(range(0, 200)))
-    test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
+    # Uncomment these in order to work on only a subset of the data
+    # train_data = T.utils.data.Subset(train_data, list(range(0, 1000)))
+    # validate_data = T.utils.data.Subset(validate_data, list(range(0, 200)))
+    # test_data = T.utils.data.Subset(test_data, list(range(0, 200)))
 
     hyperparameters = AEClassifierHyperparameters(
-        epochs=5,
+        epochs=450,
         seq_dim=28,
         batch_size=1024,
         n_classes=10,
 
         num_layers=2,
-        lr=0.001,
+        lr=0.01,
         latent_size=64,
         grad_clipping=None
     )
