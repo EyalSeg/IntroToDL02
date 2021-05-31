@@ -29,7 +29,7 @@ class Encoder(nn.Module):
                            hidden_size=self.encoding_dim,
                            num_layers=self.num_layers,
                            batch_first=True)
-        init_weights(self.rnn)
+        # init_weights(self.rnn)
         self.to(device)
 
     def forward(self, X, context=None):
@@ -48,8 +48,8 @@ class Decoder(nn.Module):
                            batch_first=True)
         self.output_layer = nn.Linear(hidden_dim, output_dim)
 
-        init_weights(self.rnn)
-        init_weights(self.output_layer)
+        # init_weights(self.rnn)
+        # init_weights(self.output_layer)
         self.to(device)
 
     def forward(self, encoded_X):
@@ -93,9 +93,11 @@ class LstmAutoEncoder(nn.Module):
         return encoded_X, hidden_states
 
     def decode(self, temporal_output, context):
-        # context = context.unsqueeze(1).repeat((1, temporal_output.shape[1], 1))
-        # return self.decoder(context)
-        return self.decoder(temporal_output)
+        context = context.unsqueeze(1).repeat((1, temporal_output.shape[1], 1))
+        return self.decoder(context)
+
+        # hack for assignment 3 - does not compress the input!
+        # return self.decoder(temporal_output)
 
     def to(self, device):
         self.device = device
