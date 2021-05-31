@@ -1,6 +1,6 @@
 import argparse
 import torch as T
-
+import numpy as np
 import pandas as pd
 
 from sklearn import preprocessing
@@ -23,7 +23,6 @@ class SP500Dataset(Dataset):
         self.data = self.data.fillna(method="ffill", axis=1)
         self.data = self.data.fillna(method="bfill", axis=1)
 
-
     def get_dates(self):
         return self.data.columns
 
@@ -37,14 +36,7 @@ class SP500Dataset(Dataset):
         return T.tensor(self.data.loc[index].values).unsqueeze(-1)
 
 
-if __name__ == "__main__":
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    import matplotlib.dates as mdates
-
-    dataset = SP500Dataset(normalize=True)
-    dates = dataset.get_dates()
-
+def plot_stock(dataset, stock_symbol, stock_name):
     fig, ax = plt.subplots()
 
     # assign locator and formatter for the xaxis ticks.
@@ -54,12 +46,22 @@ if __name__ == "__main__":
     # put the labels at 45deg since they tend to be too long
     fig.autofmt_xdate()
 
-    data = dataset['GOOGL'].squeeze(-1)
+    data = dataset[stock_symbol].squeeze(-1)
     sns.lineplot(x=dataset.get_dates(), y=data)
-    plt.title("Google Stock")
+    plt.title(f"{stock_name} Stock")
     plt.show()
 
-    data = dataset['AMZN'].squeeze(-1)
-    sns.lineplot(x=dataset.get_dates(), y=data)
-    plt.title("Amazon Stock")
-    plt.show()
+
+if __name__ == "__main__":
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+
+    sns.set_theme(style="darkgrid")
+
+    dataset = SP500Dataset(normalize=True)
+    dates = dataset.get_dates()
+
+    plot_stock(dataset, "GOOGL", "Google")
+    plot_stock(dataset, "AMZN", "Amazon")
+
